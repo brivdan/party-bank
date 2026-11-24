@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Order #{{ order.id }} · {{ settings.party_name }}{% endblock %}
+{% block content %}
+{% if order.status == 'paid' %}
+<section class="card result result-ok">
+  <p class="result-icon">✔</p>
+  <h1>Payment approved</h1>
+  <p class="big">{{ order.total_cents|money }}</p>
+  <p>Paid by <strong>{{ order.customer_name }}</strong> · ref #{{ order.transaction_id }}</p>
+  <p class="muted small">{{ order.paid_at|localtime }}</p>
+</section>
+{% elif order.status == 'cancelled' %}
+<section class="card result result-bad">
+  <h1>Order cancelled</h1>
+  <p>Nothing was charged.</p>
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>Order #{{ order.id }}</h2>
+  {% include "merchant/_order_items.html" %}
+  {% if fee_cents %}
+    <p class="muted small">Bank fee {{ fee_cents|money }} · you receive {{ (order.total_cents - fee_cents)|money }}</p>
+  {% endif %}
+</section>
+
+{% if order.status == 'open' %}
+<section class="card">
+  <h2>Identify the customer</h2>
+  <p class="muted small">Tap the customer's card on this phone, or scan its QR code with the camera.
+    You can also type the card ID.</p>
+  <form method="get" action="{{ url_for('merchant.order_pay', order_id=order.id) }}" class="nfc-autosubmit" autocomplete="off">
+    <label>Card ID
+      <input name="card" id="card-input" required placeholder="XXXX-XXXX-XXXX" autocapitalize="characters" spellcheck="false">
+    </label>
+    <button type="button" id="nfc-scan" class="secondary" hidden>📶 Scan NFC card</button>
+    <p id="nfc-status" class="muted small"></p>
+    <button type="submit">Continue to PIN</button>
+  </form>
+  <form method="post" action="{{ url_for('merchant.order_cancel', order_id=order.id) }}" data-confirm="Cancel this order?">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="secondary">Cancel order</button>
+  </form>
+</section>
+{% else %}
+<a class="button wide" href="{{ url_for('merchant.terminal') }}">New order</a>
+{% endif %}
+{% endblock %}

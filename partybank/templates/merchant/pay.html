@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Pay {{ order.total_cents|money }} · {{ settings.party_name }}{% endblock %}
+{% block content %}
+{% if declined %}
+<section class="card result result-bad" role="alert">
+  <p class="result-icon">✖</p>
+  <h1>Payment declined</h1>
+  <p>{{ declined }}</p>
+</section>
+{% endif %}
+
+<section class="card narrow">
+  <p class="muted center">Pay {{ current_account.name }}</p>
+  <p class="big center">{{ order.total_cents|money }}</p>
+  {% include "merchant/_order_items.html" %}
+  <p class="muted small">Card <code>{{ token|card }}</code></p>
+
+  <form method="post" action="{{ url_for('merchant.order_pay', order_id=order.id) }}" autocomplete="off" class="once">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="card" value="{{ token }}">
+    <label>Customer: enter your PIN to approve
+      <input name="pin" type="password" inputmode="numeric" pattern="\d{4,6}" maxlength="6" required autofocus placeholder="••••">
+    </label>
+    <button type="submit">Approve payment</button>
+  </form>
+  <p class="center small">
+    <a href="{{ url_for('merchant.order', order_id=order.id) }}">Use another card</a>
+  </p>
+</section>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Send money · {{ settings.party_name }}{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('user.dashboard') }}">← Back</a></p>
+<section class="card narrow">
+  <h1>Send money</h1>
+  <p class="muted small">Your balance: <strong>{{ account.balance_cents|money }}</strong></p>
+  <form method="post" action="{{ url_for('user.send') }}" autocomplete="off">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Recipient account number
+      <input name="to" value="{{ form.get('to', '') }}" required inputmode="numeric" placeholder="e.g. 0004" autofocus>
+    </label>
+    <label>Amount ({{ settings.currency_symbol }})
+      <input name="amount" value="{{ form.get('amount', '') }}" required inputmode="decimal" placeholder="0.00">
+    </label>
+    <label>Note (optional)
+      <input name="note" value="{{ form.get('note', '') }}" maxlength="{{ max_note }}" placeholder="What is it for?">
+    </label>
+    <button type="submit">Continue</button>
+  </form>
+  <p class="muted small">You will see the recipient's name and confirm with your PIN before anything is sent.</p>
+</section>
+{% endblock %}

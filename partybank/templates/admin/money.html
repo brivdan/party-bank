@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Bank desk · {{ settings.party_name }}{% endblock %}
+{% macro account_select(name, label, include_reserve=True, required=True) %}
+  <label>{{ label }}
+    <select name="{{ name }}" {% if required %}required{% endif %}>
+      <option value="">Choose…</option>
+      {% for a in accounts if include_reserve or a.role != 'system' %}
+        <option value="{{ a.id }}" {% if name == 'account_id' and a.id == selected %}selected{% endif %}>
+          {{ a.name }}{% if a.role != 'system' %} · {{ a.id|acctno }}{% endif %} · {{ a.balance_cents|money }}{% if a.status != 'active' %} (frozen){% endif %}
+        </option>
+      {% endfor %}
+    </select>
+  </label>
+{% endmacro %}
+{% macro amount_field() %}
+  <label>Amount ({{ settings.currency_symbol }})
+    <input name="amount" required inputmode="decimal" placeholder="0.00">
+  </label>
+{% endmacro %}
+{% macro form_head(action) %}
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="key" value="{{ keys[action] }}">
+{% endmacro %}
+{% block content %}
+<h1>Bank desk</h1>
+<p class="muted small">Physical cash held: <strong>{{ stats.cash_cents|money }}</strong> ·
+  Reserve: <strong>{{ stats.reserve_cents|money }}</strong> ·
+  Every action below is a ledger transaction and an audit log entry. Balances are never edited directly.</p>
+
+<div class="grid-2">
+  <section class="card">
+    <h2>💵 Cash deposit</h2>
+    <p class="muted small">Guest hands over cash and gets the same amount on their account. Choose the reserve to add bank cash (float).</p>
+    <form method="post" action="{{ url_for('admin.money_action', action='deposit') }}" class="once" autocomplete="off">
+      {{ form_head('deposit') }}
+      {{ account_select('account_id', 'Account') }}
+      {{ amount_field() }}
+      <label>Note (optional) <input name="reason" maxlength="100" placeholder="Cash deposit"></label>
+      <button type="submit">Record deposit</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>💸 Cash withdrawal</h2>
+    <p class="muted small">Pay out cash and debit the account. Limited to the cash held in the vault.</p>
+    <form method="post" action="{{ url_for('admin.money_action', action='withdrawal') }}" class="once" autocomplete="off">
+      {{ form_head('withdrawal') }}
+      {{ account_select('account_id', 'Account') }}
+      {{ amount_field() }}
+      <label>Note (optional) <input name="reason" maxlength="100" placeholder="Cash withdrawal"></label>
+      <button type="submit">Record withdrawal</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>🔁 Transfer between accounts</h2>
+    <form method="post" action="{{ url_for('admin.money_action', action='transfer') }}" class="once" autocomplete="off">
+      {{ form_head('transfer') }}
+      {{ account_select('account_id', 'From') }}
+      {{ account_select('to_account_id', 'To') }}
+      {{ amount_field() }}
+      <label>Reason (required) <input name="reason" required minlength="3" maxlength="100"></label>
+      <button type="submit">Transfer</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>🧾 Charge an account</h2>
+    <p class="muted small">Bank service charge, paid to the reserve and counted as earnings. The account holder approves with their PIN.</p>
+    <form method="post" action="{{ url_for('admin.money_action', action='charge') }}" class="once" autocomplete="off">
+      {{ form_head('charge') }}
+      {{ account_select('account_id', 'Account', include_reserve=False) }}
+      {{ amount_field() }}
+      <label>Reason (required) <input name="reason" required minlength="3" maxlength="100" placeholder="e.g. Card replacement"></label>
+      <label>Account holder's PIN
+        <input name="pin" type="password" inputmode="numeric" pattern="\d{4,6}" maxlength="6" required>
+      </label>
+      <button type="submit">Charge</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>✏️ Credit or debit (correction)</h2>
+    <p class="muted small">Credits come from the reserve; debits go to the reserve. Not counted as earnings.</p>
+    <form method="post" action="{{ url_for('admin.money_action', action='credit') }}" class="once" autocomplete="off" id="adjust-form">
+      {{ form_head('credit') }}
+      {{ account_select('account_id', 'Account', include_reserve=False) }}
+      <label class="radio"><input type="radio" name="direction" value="credit" checked> Credit (add money)</label>
+      <label class="radio"><input type="radio" name="direction" value="debit"> Debit (remove money)</label>
+      {{ amount_field() }}
+      <label>Reason (required) <input name="reason" required minlength="3" maxlength="90" placeholder="e.g. Refund for broken item"></label>
+      <button type="submit">Post adjustment</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

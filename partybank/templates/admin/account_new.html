@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}New account · {{ settings.party_name }}{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>New account</h1>
+  <form method="post" autocomplete="off">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Name
+      <input name="name" value="{{ form.get('name', '') }}" required maxlength="80" autofocus>
+    </label>
+    <label>Role
+      <select name="role">
+        <option value="user" {% if form.get('role') != 'merchant' %}selected{% endif %}>User (guest)</option>
+        <option value="merchant" {% if form.get('role') == 'merchant' %}selected{% endif %}>Merchant (stall)</option>
+      </select>
+    </label>
+    <label>PIN (4–6 digits)
+      <input name="pin" type="password" inputmode="numeric" pattern="\d{4,6}" maxlength="6" required>
+    </label>
+    <label>Opening cash deposit ({{ settings.currency_symbol }}, cash received now)
+      <input name="initial_balance" inputmode="decimal" value="{{ form.get('initial_balance', '0') }}">
+    </label>
+
+    <fieldset>
+      <legend>Card</legend>
+      {% set mode = form.get('card_mode', 'generate') %}
+      <label class="radio"><input type="radio" name="card_mode" value="generate" {% if mode == 'generate' %}checked{% endif %}>
+        Generate a new card ID</label>
+      <label class="radio"><input type="radio" name="card_mode" value="existing" {% if mode == 'existing' %}checked{% endif %}>
+        Use a specific card ID (pre-written tag)</label>
+      <label class="radio"><input type="radio" name="card_mode" value="none" {% if mode == 'none' %}checked{% endif %}>
+        No card for now</label>
+      <input name="card_token" id="card-input" list="free-cards" value="{{ form.get('card_token', '') }}"
+             placeholder="Card ID (only for 'specific card ID')" autocapitalize="characters" spellcheck="false">
+      <datalist id="free-cards">
+        {% for c in free_cards %}<option value="{{ c.token|card }}">{{ c.label or '' }}</option>{% endfor %}
+      </datalist>
+      <button type="button" id="nfc-scan" class="secondary" hidden>📶 Scan NFC card</button>
+      <p id="nfc-status" class="muted small"></p>
+    </fieldset>
+
+    <button type="submit">Create account</button>
+  </form>
+</section>
+{% endblock %}

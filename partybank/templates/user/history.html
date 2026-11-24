@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Transactions · {{ settings.party_name }}{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('user.dashboard') }}">← Back</a></p>
+<section class="card">
+  <div class="row-between">
+    <h1>Transactions</h1>
+    <p class="balance small-balance">{{ account.balance_cents|money }}</p>
+  </div>
+  <nav class="tabs">
+    <a href="{{ url_for('user.history') }}" class="{{ 'active' if not direction }}">All</a>
+    <a href="{{ url_for('user.history', dir='in') }}" class="{{ 'active' if direction == 'in' }}">Incoming</a>
+    <a href="{{ url_for('user.history', dir='out') }}" class="{{ 'active' if direction == 'out' }}">Outgoing</a>
+  </nav>
+  {% include "_history.html" %}
+</section>
+{% endblock %}

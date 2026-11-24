@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Admin · {{ settings.party_name }}{% endblock %}
+{% block content %}
+<div class="stats">
+  <div class="stat"><span>{{ stats.accounts }}</span>Accounts ({{ stats.users }} users, {{ stats.merchants }} merchants)</div>
+  <div class="stat"><span>{{ stats.digital_cents|money }}</span>Digital account balances</div>
+  <div class="stat"><span>{{ stats.volume_cents|money }}</span>Transaction volume (purchases + transfers)</div>
+  <div class="stat"><span>{{ stats.earnings_cents|money }}</span>Bank earnings (fees + charges)</div>
+  <div class="stat"><span>{{ stats.cash_cents|money }}</span>Physical cash reserves</div>
+  <div class="stat"><span>{{ stats.reserve_cents|money }}</span>Party Bank Reserve balance</div>
+</div>
+<p class="muted small">
+  {{ stats.tx_count }} transactions · cash in {{ stats.deposits_cents|money }} · cash out {{ stats.withdrawals_cents|money }}
+  · {{ stats.cards }} cards ({{ stats.free_cards }} unassigned).
+  Cash reserves = digital balances + reserve balance. Customer deposits are money held for customers, not earnings.
+</p>
+{% include "admin/_ledger_check.html" %}
+
+<div class="grid-2">
+  <section class="card">
+    <h2>Bank accounts</h2>
+    <table>
+      <tbody>
+      {% for b in bank_accounts %}
+        <tr>
+          <td><a href="{{ url_for('admin.account_detail', account_id=b.id) }}">{{ b.name }}</a>
+            <br><span class="muted small">{{ 'Bank’s own money: earnings, credits, debits' if b.system_key == 'reserve' else 'Physical cash at the bank desk' }}</span></td>
+          <td class="num">{{ (b.balance_cents if b.system_key == 'reserve' else -b.balance_cents)|money }}
+            {% if b.system_key == 'cash' %}<br><span class="muted small">held</span>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <a class="button wide" href="{{ url_for('admin.money') }}">Open bank desk</a>
+  </section>
+
+  <section class="card">
+    <h2>Ranking by balance</h2>
+    {% if ranking %}
+    <table>
+      <tbody>
+      {% for r in ranking %}
+        <tr>
+          <td class="muted">{{ loop.index }}.</td>
+          <td><a href="{{ url_for('admin.account_detail', account_id=r.id) }}">{{ r.name }}</a> <span class="muted small">{{ r.role }}</span></td>
+          <td class="num">{{ r.balance_cents|money }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="muted">No accounts yet.</p>{% endif %}
+  </section>
+</div>
+
+<section class="card">
+  <div class="row-between">
+    <h2>All accounts</h2>
+    <a class="button" href="{{ url_for('admin.account_new') }}">+ New account</a>
+  </div>
+  <input type="search" class="filter" data-filter="#accounts-table" placeholder="Filter by name…">
+  <div class="table-wrap">
+  <table id="accounts-table">
+    <thead><tr><th>No.</th><th>Name</th><th>Role</th><th class="num">Balance</th><th>Cards</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    {% for a in accounts %}
+      <tr>
+        <td>{{ a.id|acctno }}</td>
+        <td><a href="{{ url_for('admin.account_detail', account_id=a.id) }}">{{ a.name }}</a></td>
+        <td>{{ a.role }}</td>
+        <td class="num">{{ a.balance_cents|money }}</td>
+        <td>{{ a.card_count }}</td>
+        <td><span class="tag {{ 'tag-good' if a.status == 'active' else 'tag-bad' }}">{{ a.status }}</span></td>
+        <td><a class="small" href="{{ url_for('admin.money', account=a.id) }}">Money</a></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7" class="muted">No accounts yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endblock %}

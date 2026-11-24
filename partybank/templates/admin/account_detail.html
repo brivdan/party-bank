@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}{{ account.name }} · {{ settings.party_name }}{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('admin.dashboard') }}">← Accounts</a></p>
+
+<section class="card">
+  <div class="row-between">
+    <div>
+      <h1>{{ account.name }}</h1>
+      {% if account.role == 'system' %}
+      <p class="muted">Bank account · {{ 'the bank’s own money (earnings, credits, debits)' if account.system_key == 'reserve'
+          else 'physical cash at the bank desk; changes only through deposits and withdrawals' }}</p>
+      {% else %}
+      <p class="muted">Account no. {{ account.id|acctno }} · {{ account.role }} · created {{ account.created_at|localtime }}
+        · <span class="tag {{ 'tag-good' if account.status == 'active' else 'tag-bad' }}">{{ account.status }}</span></p>
+      {% endif %}
+    </div>
+    <div class="center">
+      {% if account.system_key == 'cash' %}
+        <p class="balance">{{ (-account.balance_cents)|money }}</p><p class="muted small">cash held</p>
+      {% else %}
+        <p class="balance">{{ account.balance_cents|money }}</p>
+        <a class="button small-button" href="{{ url_for('admin.money', account=account.id) }}">Bank desk</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+{% if account.role != 'system' %}
+<div class="grid-2">
+  <section class="card">
+    <h2>Reset PIN</h2>
+    <form method="post" action="{{ url_for('admin.account_reset_pin', account_id=account.id) }}" autocomplete="off">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input name="pin" type="password" inputmode="numeric" pattern="\d{4,6}" maxlength="6" required placeholder="New PIN">
+      <button type="submit">Set PIN</button>
+    </form>
+  </section>
+  <section class="card">
+    <h2>Account status</h2>
+    <form method="post" action="{{ url_for('admin.account_status', account_id=account.id) }}"
+          data-confirm="{{ 'Freeze' if account.status == 'active' else 'Reactivate' }} this account?">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {% if account.status == 'active' %}
+        <p class="muted small">A frozen account cannot log in or move money.</p>
+        <button class="danger">Freeze account</button>
+      {% else %}
+        <button>Reactivate account</button>
+      {% endif %}
+    </form>
+  </section>
+</div>
+
+<section class="card">
+  <h2>Cards</h2>
+  {% if cards %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Card ID</th><th>NFC / QR URL</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    {% for c in cards %}
+      <tr>
+        <td class="nowrap"><code>{{ c.token|card }}</code></td>
+        <td><code class="small copy" title="Click to copy">{{ card_urls[c.token] }}</code></td>
+        <td><span class="tag {{ 'tag-good' if c.status == 'active' else 'tag-bad' }}">{{ c.status }}</span></td>
+        <td class="actions">
+          <a class="button small-button secondary-button" href="{{ url_for('admin.cards_print', id=c.id) }}">QR</a>
+          <form method="post" action="{{ url_for('admin.card_status', card_id=c.id) }}" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="back" value="account">
+            <button class="small {{ 'danger' if c.status == 'active' else '' }}">{{ 'Block' if c.status == 'active' else 'Unblock' }}</button>
+          </form>
+          <form method="post" action="{{ url_for('admin.card_unassign', card_id=c.id) }}" class="inline"
+                data-confirm="Remove this card from {{ account.name }}?">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="back" value="account">
+            <button class="small secondary">Unassign</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="muted">No cards assigned.</p>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('admin.account_add_card', account_id=account.id) }}" class="add-card" autocomplete="off">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <h3>Add a card</h3>
+    <label class="radio"><input type="radio" name="card_mode" value="generate" checked> Generate a new card ID</label>
+    <label class="radio"><input type="radio" name="card_mode" value="existing"> Use a specific card ID</label>
+    <input name="card_token" id="card-input" list="free-cards" placeholder="Card ID" autocapitalize="characters" spellcheck="false">
+    <datalist id="free-cards">
+      {% for c in free_cards %}<option value="{{ c.token|card }}">{{ c.label or '' }}</option>{% endfor %}
+    </datalist>
+    <button type="button" id="nfc-scan" class="secondary" hidden>📶 Scan NFC card</button>
+    <p id="nfc-status" class="muted small"></p>
+    <button type="submit">Assign card</button>
+  </form>
+</section>
+
+{% endif %}{# end of customer/merchant-only sections #}
+
+{% if account.role == 'merchant' %}
+<section class="card">
+  <h2>Products</h2>
+  {% if products %}
+  <ul class="plain">
+    {% for p in products %}<li>{{ p.name }} · {{ p.price_cents|money }}{% if not p.active %} <span class="tag">hidden</span>{% endif %}</li>{% endfor %}
+  </ul>
+  {% else %}<p class="muted">No products.</p>{% endif %}
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>Ledger</h2>
+  {% include "_history.html" %}
+</section>
+{% endblock %}

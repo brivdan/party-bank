@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ product.name }} · {{ settings.party_name }}{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('merchant.products') }}">← Products</a></p>
+<section class="card narrow">
+  <h1>Edit product</h1>
+  <form method="post" autocomplete="off">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Name
+      <input name="name" value="{{ request.form.get('name', product.name) }}" required maxlength="60">
+    </label>
+    <label>Price ({{ settings.currency_symbol }})
+      <input name="price" value="{{ request.form.get('price', '%.2f'|format(product.price_cents / 100)) }}" required inputmode="decimal">
+    </label>
+    <label class="radio"><input type="checkbox" name="active" value="1" {% if product.active %}checked{% endif %}> On sale (shown on the terminal)</label>
+    <p class="muted small">Price changes apply to new orders only. Past orders keep the price they were sold at.</p>
+    <button type="submit">Save</button>
+  </form>
+</section>
+{% endblock %}

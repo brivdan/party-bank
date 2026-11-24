@@ -1,0 +1,8 @@
+{% if ledger_problems %}
+  <div class="flash flash-error">
+    <strong>Ledger check failed:</strong>
+    <ul>{% for p in ledger_problems %}<li>{{ p }}</li>{% endfor %}</ul>
+  </div>
+{% else %}
+  <p class="muted small">✔ Ledger check: every transaction is balanced and all balances match the ledger.</p>
+{% endif %}

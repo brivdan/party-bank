@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Transactions · {{ settings.party_name }}{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Transactions</h1>
+  {% include "admin/_ledger_check.html" %}
+  <input type="search" class="filter" data-filter="#tx-table" placeholder="Filter by name, type, ref…">
+  <div class="table-wrap">
+  <table id="tx-table">
+    <thead><tr><th>Ref</th><th>When</th><th>Type</th><th>From</th><th>To</th><th class="num">Amount</th><th>Note</th><th>By</th></tr></thead>
+    <tbody>
+    {% for t in rows %}
+      <tr>
+        <td>#{{ t.id }}</td>
+        <td class="nowrap small">{{ t.created_at|localtime }}</td>
+        <td><span class="tag">{{ t.kind }}</span>{% if t.status != 'completed' %} <span class="tag tag-bad">{{ t.status }}</span>{% endif %}</td>
+        <td>{{ t.from_name }} <span class="muted small">{{ t.from_account_id|acctno }}</span></td>
+        <td>{{ t.to_name }} <span class="muted small">{{ t.to_account_id|acctno }}</span></td>
+        <td class="num">{{ t.amount_cents|money }}</td>
+        <td class="small">{{ t.description or '' }}</td>
+        <td class="small">{{ t.created_by_name or 'system' }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="8" class="muted">No transactions yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="muted small">Latest 500 transactions.</p>
+</section>
+{% endblock %}

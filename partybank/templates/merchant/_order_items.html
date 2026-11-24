@@ -1,0 +1,14 @@
+<table class="order-items">
+  <tbody>
+  {% for i in items %}
+    <tr>
+      <td>{{ i.quantity }}×</td>
+      <td>{{ i.name }}{% if i.quantity > 1 %} <span class="muted small">@ {{ i.unit_price_cents|money }}</span>{% endif %}</td>
+      <td class="num">{{ i.line_total_cents|money }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr><th colspan="2">Total</th><th class="num">{{ order.total_cents|money }}</th></tr>
+  </tfoot>
+</table>

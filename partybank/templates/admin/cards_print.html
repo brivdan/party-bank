@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Print cards · {{ settings.party_name }}{% endblock %}
+{% block content %}
+<div class="no-print row-between">
+  <a href="{{ url_for('admin.cards') }}">← Cards</a>
+  <button type="button" class="small" onclick="window.print()">🖨 Print</button>
+</div>
+<p class="muted small no-print">Each QR code holds only the card URL. Base URL: <code>{{ settings.base_url }}</code></p>
+<div class="print-grid">
+  {% for c in cards %}
+  <div class="print-card">
+    <strong>{{ settings.party_name }}</strong>
+    <img class="qr" src="{{ card_urls[c.token]|qr }}" alt="QR code for card {{ c.token|card }}">
+    <code>{{ c.token|card }}</code>
+  </div>
+  {% else %}
+  <p class="muted">No active cards.</p>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,189 @@
+=== Stage 1 ===
+Stage 1 is built and running. The server is up at http://127.0.0.1:5000. Other devices on your network can reach it at http://172.20.10.2:5000, which is the address the app detected.
+
+Testing: 12 automated tests pass. I also ran a live check: all three roles logged in over HTTP, I restarted the server, and they logged in again with the same balances (Alice still had A$95.50).
+
+Completion criteria:
+
+Starts locally: python app.py listens on port 5000 on all network interfaces, so other Wi-Fi devices can connect.
+All three roles log in: admins use a username and password; users and merchants use a card ID and PIN. Each role can only open its own pages (/admin, /me, /merchant). Logout works.
+Data persists: everything is stored in 
+partybank.db
+. The session key is saved in the same folder, so logins also survive a restart.
+What else is in place:
+
+Database: all seven tables you listed. Money is stored as whole cents. Every balance change writes two ledger entries (a debit and a credit) in one database transaction.
+Reserve account: opening balances come from a system account, "Party Bank Reserve". It is the only account allowed to go negative.
+Admin screens:
+Create user and merchant accounts with a PIN and an opening balance.
+Register blank cards one at a time or up to 100 at once, or register a specific ID that is already written on a tag.
+Assign, block or unassign cards, freeze accounts and reset PINs.
+Change the server base URL in Settings, and view the audit log.
+NFC:
+A card ID is 12 random characters, and the tag holds only the card URL (about 45 bytes).
+Opening /card/<id> just fills in the login form. The PIN is still required, and the page shows nothing about the account.
+You can type the card ID by hand. The Web NFC scan button only appears where the browser supports it over HTTPS.
+Security: five wrong PIN or password attempts lock the account for 5 minutes. Every form is protected against cross-site form submission. A session ends as soon as its account is frozen or its card is blocked.
+Demo data: python manage.py seed-demo creates the admin, three users, two merchants with products, one sample purchase and three spare cards. The README lists the logins (for example admin / admin123, and card DEMO-USER-0001 with PIN 1111).
+Decisions you may want to change:
+
+PIN location: the PIN belongs to the account, not the card. A replacement card keeps the same PIN.
+Admin password: if you start app.py without seeding demo data, it creates admin with a random password and prints it once. Run manage.py set-admin-password to change it.
+Demo data: the demo card IDs and PINs are easy to guess, so wipe them with python manage.py reset before the real party.
+Base URL: it was set automatically from this computer's current IP. Give the server a fixed IP before you write tags, because tags keep whatever URL was written to them.
+Not in Stage 1: payments, product management for merchants, admin top-ups, and QR code generation and scanning. The database tables already support payments and products. QR codes will need either a small library or a pure-JS generator, and we can choose when we get there.
+
+Stop the server with Ctrl+C in its terminal, or ask me to stop it.
+
+Est. Credits Used: 19.84
+Elapsed time: 11m 57s
+
+
+
+
+=== Stage 2 ===
+Stage 2 is done. Users can send money to each other, balances update immediately, overdrafts are rejected, and every transfer is recorded. All 29 tests pass (12 from Stage 1, 17 new). I also ran a live check on the real server, described at the end.
+
+What users see
+
+Dashboard: the balance, the user's account number (for example 0004), a "Send money" button and the last 10 transactions.
+
+History page: All, Incoming and Outgoing tabs. Each row shows ↓ From / ↑ To, the other person, the type, the note, a ref number, the signed amount and the balance after.
+
+Sending money:
+
+Enter the recipient's account number, the amount and an optional note.
+Check the recipient's name and the balance after the payment.
+Enter the PIN to send.
+The dashboard then shows the new balance and a message like "Sent A$10.25 to Bob Smith (ref #12)".
+
+Auto-refresh: the user and merchant dashboards check for new activity every 8 seconds and reload when something arrives. They don't reload while you're typing.
+
+Admin: a new Transactions page lists every transaction. It and the dashboard show a ledger check that confirms every transaction balances and every account balance matches its ledger entries.
+
+How each requirement is met
+
+All money movements, including opening balances and the demo purchase, go through one function: post_transaction() in banking.py.
+
+Requirement	How
+Validate balance	Checked inside the write lock. A database rule also stops any non-reserve balance from going negative.
+Reject invalid amounts	Amounts must be positive whole cents, at most A$1,000,000. Negative, zero, decimal, text and edited form values are rejected.
+Prevent unauthorized payments	A login and the PIN are checked first. Inside the function, a user can only send from their own account and only admins can issue money. The caller must always be identified.
+Prevent duplicates	Each confirmation form has a one-time key. Submitting it twice returns the first result, so the money moves once.
+Atomic debit and credit	The transaction row and both ledger entries are written in one locked SQLite transaction. A test with 4 simultaneous full-balance payments: exactly 1 succeeds.
+Integer amounts	All amounts are stored as whole cents.
+Record the details	Transaction ID, timestamp, sender, recipient, amount, type, note and who made it.
+Balanced, unchangeable ledger	Each transaction has a debit and a credit that sum to zero. Database triggers block editing or deleting ledger entries, and block changing the money fields of transactions or deleting them.
+Decisions you may want to change
+
+PIN to send: the PIN is asked again at confirmation, even though the user is already logged in. I did this because people share phones at parties. Wrong PINs count toward the same 5-attempt lockout as login.
+Account numbers: recipients are entered by account number, not card ID, because the card ID is half of the login. The confirmation screen shows the recipient's name, so anyone can look up a name from an account number.
+Who can send: only users have a Send page for now. The transaction function already allows merchants to send transfers if you want that later.
+Failed payments: rejected payments are written to the audit log, not to the transactions table.
+Live check and database changes: I restarted the real server. It added the new database column to your existing Stage 1 database automatically, with no reset needed. I then ran a real transfer over HTTP: Alice sent A$12.34 to Bob, a double submit paid only once, and an overdraft was rejected. That test transfer is now in your database (Alice A$83.16, Bob A$87.34). Run python manage.py reset then seed-demo if you want a clean demo.
+
+Not built yet: admin top-ups for existing accounts. Currently money only enters through the opening balance. The transaction function already supports top-ups, so it's a small form to add when you want it.
+
+Est. Credits Used: 18.87
+Elapsed time: 9m 56s
+
+
+
+=== Stage 3 ===
+Stage 3 is done. A merchant can create products and build an order, the customer approves it with their PIN, both balances update, and the sale shows in both histories. All 52 tests pass (23 of them new). I also ran the full flow on the live server, described at the end.
+
+Product management (Products page)
+
+Add products, edit name and price, deactivate or reactivate, and delete.
+A product that has already sold is deactivated instead of deleted, so old orders still point to it.
+Each order line stores its own copy of the name and price, so later price changes don't alter past orders.
+Payment terminal
+
+Build the order: pick products with the +/− buttons and/or add a custom amount with a description. The total on screen is only a preview. The server recalculates it from the prices in the database and ignores any price sent by the browser.
+
+Identify the customer: any of these works:
+
+Tap the card on the merchant's iPhone.
+Scan the card's QR code with the iPhone camera.
+Type the card ID.
+Tapping or scanning opens the card URL. Because the merchant is logged in, the app attaches the card to their latest open order and goes straight to the PIN screen. This works on iPhone without Web NFC.
+
+Customer approves: the PIN screen shows only the amount and the card ID, nothing about the account. The customer types their PIN on the merchant's phone. Wrong PINs count toward the usual 5-attempt lockout.
+
+Result: a green "Payment approved" receipt with the customer's name, or a red "Payment declined" box with the reason: wrong PIN, insufficient funds, blocked card or unknown card.
+
+How a payment is processed
+
+One database transaction posts the purchase, posts the fee if fees are on, and marks the order paid. If any part fails, nothing is saved.
+The transaction function only accepts a merchant's purchase if it matches one of that merchant's own open orders, for that order's exact total.
+Each order can be paid only once. A double tap on Approve does not charge twice.
+Merchant dashboard: current balance, total sales, number of sales, fees paid, net revenue (sales minus fees), and the transaction history. Fees paid only appears when fees are on.
+
+Fees: set them in Admin → Settings as a percentage (for example 2.5); the default is 0, which turns them off. The fee is rounded to the nearest cent and recorded as its own transaction from the merchant to the reserve. Customers always pay the listed price.
+
+Decisions you may want to change:
+
+New dependency: I added segno, a small library with no other dependencies, to draw QR codes. Admins can print card QR codes from Admin → Cards. Guests can also show their card's QR code on their own dashboard instead of a physical card.
+Database changes: I added orders and order_items tables and a fee transaction type. The orders table records what was bought; the money itself still moves only through the transaction function.
+Where the PIN is typed: the customer types their PIN on the merchant's phone, like a normal card terminal. The alternative is letting customers approve the payment on their own phone, which keeps the PIN private. I didn't build that; it's a moderate addition if you want it.
+Live run: adding the fee type meant rebuilding the transactions table, so I backed up your database first to 
+partybank-backup-before-stage3.db
+. After the restart, all 8 existing transactions and 16 ledger entries were still there and the ledger check passed. I then ran a real sale over HTTP: Coffee Corner charged 2× Latte, the card URL was opened from the merchant session as if the card were tapped, and Alice entered her PIN. Alice went from A$80.16 to A$71.16 and Coffee Corner from A$4.50 to A$13.50. That sale is now in your demo data.
+
+The server is running again at http://172.20.10.2:5000. To try it on your iPhone, log in with card DEMO-SHOP-0001 and PIN 9001, then open Terminal.
+
+Est. Credits Used: 26.95
+Elapsed time: 19m 14s
+
+
+
+
+=== Stage 4 ===
+Stage 4 is done. The admin can now record cash deposits and withdrawals, transfer money, charge accounts and post credits or debits. A new dashboard shows the bank-wide figures. All 66 tests pass (14 new), and I ran the bank desk on the live server.
+
+The bank's own accounts
+
+Party Bank Reserve now works as a real account with a balance: the bank's own money. Fees and charges go into it; credits come out of it.
+Cash Vault is new. It tracks the physical cash at the desk and only changes through deposits and withdrawals.
+Both accounts have their own pages with a full ledger. Every money action goes through the same transaction function as before.
+Bank desk (new page, linked from the top menu and from each account):
+
+Action	Money moves	Bank earnings?
+Cash deposit	Cash Vault → account. Choosing the reserve records a starting cash float.	No
+Cash withdrawal	account → Cash Vault. Can't exceed the account balance or the cash actually held.	No
+Transfer	between any customer, merchant or reserve accounts. Reason required.	No
+Charge	account → reserve. Reason required, and the account holder enters their PIN.	Yes
+Credit / Debit	reserve ↔ account. Reason required (e.g. "Debit: Duplicate credit").	No
+Each action is posted as a ledger transaction and an audit log entry together, both naming the admin and the ref number. Rejected attempts are also logged. Each form has a one-time key, so a double submit doesn't post twice. The opening amount on a new account is now recorded as a cash deposit.
+
+Dashboard:
+
+total accounts and total digital balances
+transaction volume (purchases + transfers)
+bank earnings (fees + charges only)
+physical cash held and the reserve balance
+top 10 accounts by balance
+the full account list, with a Money link on each row
+The figures always reconcile: cash held = digital balances + reserve balance.
+
+No direct balance overwrites: database rules now reject:
+
+any change to a balance that doesn't match the account's latest ledger entry
+a ledger entry that doesn't continue the account's running balance
+a new account created with a non-zero balance
+I tested all three, along with a migration test on a Stage 3-style database.
+
+Completion criteria:
+
+Admin manages the whole system: accounts, cards, PINs, freezing and blocking (from earlier stages), plus all the money actions above.
+Deposits and withdrawals update balances and cash reserves: tested, and checked live. Carol's A$10 deposit and A$4 withdrawal moved her balance and the cash held by exactly A$6.
+Adjustments are traceable: each has a required reason, the admin who made it, a ref number, and both a ledger and an audit entry.
+Deposits aren't bank profit: a tested deposit left earnings and the reserve unchanged.
+One thing to know about your live data: the live reserve shows −A$224.42. In Stages 1–3, opening balances were money the reserve created with no cash behind it, and the ledger can't be rewritten. So the dashboard currently reads cash held A$6.00, digital balances A$230.42, reserve −A$224.42. That's correct for the history you have, but confusing for a demo. If you want a clean start, run python manage.py reset then python manage.py seed-demo. The new demo records opening balances as cash deposits, so the reserve starts at A$0 and the vault at A$225.
+
+Backup and server: I backed up the database to 
+partybank-backup-before-stage4.db
+ before the migration. All 12 existing transactions were kept and the ledger check passes. The server is running again at http://172.20.10.2:5000.
+
+Est. Credits Used: 37.61
+Elapsed time: 23m 19s

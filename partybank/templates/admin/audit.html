@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Audit log · {{ settings.party_name }}{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Audit log</h1>
+  <p class="muted small">Latest 300 events.</p>
+  <input type="search" class="filter" data-filter="#audit-table" placeholder="Filter…">
+  <div class="table-wrap">
+  <table id="audit-table">
+    <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Details</th><th>IP</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td class="nowrap">{{ r.created_at|localtime }}</td>
+        <td>{{ r.actor_name or '—' }}</td>
+        <td><span class="tag">{{ r.action }}</span></td>
+        <td>{{ r.details }}</td>
+        <td class="small">{{ r.ip or '' }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="muted">No events yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,28 @@
+{# Ledger history table. Expects `history` rows from banking.account_history. #}
+{% set kind_labels = {'issue': 'Top-up', 'transfer': 'Transfer', 'purchase': 'Purchase',
+                      'refund': 'Refund', 'adjustment': 'Adjustment', 'fee': 'Fee',
+                      'deposit': 'Cash deposit', 'withdrawal': 'Cash withdrawal', 'charge': 'Charge'} %}
+{% if history %}
+<div class="table-wrap">
+<table class="history">
+  <thead><tr><th>When</th><th>Details</th><th class="num">Amount</th><th class="num">Balance</th></tr></thead>
+  <tbody>
+  {% for h in history %}
+    <tr class="dir-{{ h.direction }}">
+      <td class="nowrap small">{{ h.created_at|localtime }}<br><span class="muted">ref #{{ h.tx_id }}</span></td>
+      <td>
+        <span class="dir-icon" aria-hidden="true">{{ '↓' if h.direction == 'in' else '↑' }}</span>
+        {{ 'From' if h.direction == 'in' else 'To' }} <strong>{{ h.counterparty }}</strong>
+        <span class="tag">{{ kind_labels.get(h.kind, h.kind) }}</span>
+        {% if h.description %}<br><span class="muted small">{{ h.description }}</span>{% endif %}
+      </td>
+      <td class="num {{ 'neg' if h.amount_cents < 0 else 'pos' }}">{{ '+' if h.amount_cents > 0 }}{{ h.amount_cents|money }}</td>
+      <td class="num">{{ h.balance_after_cents|money }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="muted">No transactions yet.</p>
+{% endif %}

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Cards · {{ settings.party_name }}{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Register cards</h1>
+  <p class="muted small">Write only the URL shown below to each NFC tag (NDEF URL record) or QR code.
+    Balances, PINs and names stay in the database.</p>
+  <form method="post" class="register-form" autocomplete="off">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Number of new random cards
+      <input name="count" type="number" min="1" max="100" value="1">
+    </label>
+    <label>…or one specific card ID (leave empty to generate)
+      <input name="token" id="card-input" placeholder="e.g. a pre-written tag ID" autocapitalize="characters" spellcheck="false">
+    </label>
+    <label>Label (optional)
+      <input name="label" maxlength="60" placeholder="e.g. Batch 1">
+    </label>
+    <button type="button" id="nfc-scan" class="secondary" hidden>📶 Scan NFC card</button>
+    <p id="nfc-status" class="muted small"></p>
+    <button type="submit">Register</button>
+  </form>
+</section>
+
+<section class="card">
+  <div class="row-between">
+    <h2>All cards</h2>
+    <a href="{{ url_for('admin.cards_print') }}">?? Print QR codes (all active)</a>
+  </div>
+  <input type="search" class="filter" data-filter="#cards-table" placeholder="Filter by card ID or name…">
+  <div class="table-wrap">
+  <table id="cards-table">
+    <thead><tr><th>Card ID</th><th>URL for NFC / QR</th><th>Account</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    {% for c in cards %}
+      <tr>
+        <td class="nowrap"><code>{{ c.token|card }}</code>{% if c.label %}<br><span class="muted small">{{ c.label }}</span>{% endif %}</td>
+        <td><code class="small copy" title="Click to copy">{{ card_urls[c.token] }}</code></td>
+        <td>{% if c.account_id %}<a href="{{ url_for('admin.account_detail', account_id=c.account_id) }}">{{ c.account_name }}</a>
+            <span class="muted small">{{ c.account_role }}</span>{% else %}<span class="muted">unassigned</span>{% endif %}</td>
+        <td><span class="tag {{ 'tag-good' if c.status == 'active' else 'tag-bad' }}">{{ c.status }}</span></td>
+        <td class="actions">
+          <a class="button small-button secondary-button" href="{{ url_for('admin.cards_print', id=c.id) }}">QR</a>
+          <form method="post" action="{{ url_for('admin.card_status', card_id=c.id) }}" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="small {{ 'danger' if c.status == 'active' else '' }}">{{ 'Block' if c.status == 'active' else 'Unblock' }}</button>
+          </form>
+          {% if c.account_id %}
+          <form method="post" action="{{ url_for('admin.card_unassign', card_id=c.id) }}" class="inline"
+                data-confirm="Remove this card from {{ c.account_name }}?">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="small secondary">Unassign</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="muted">No cards registered.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endblock %}

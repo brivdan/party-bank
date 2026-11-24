@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Products · {{ settings.party_name }}{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Add product</h1>
+  <form method="post" class="inline-grid" autocomplete="off">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Name
+      <input name="name" value="{{ form.get('name', '') }}" required maxlength="60" placeholder="e.g. Latte">
+    </label>
+    <label>Price ({{ settings.currency_symbol }})
+      <input name="price" value="{{ form.get('price', '') }}" required inputmode="decimal" placeholder="0.00">
+    </label>
+    <button type="submit">Add</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Products</h2>
+  {% if products %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Product</th><th class="num">Price</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    {% for p in products %}
+      <tr class="{{ '' if p.active else 'inactive' }}">
+        <td>{{ p.name }}</td>
+        <td class="num">{{ p.price_cents|money }}</td>
+        <td>{% if p.active %}<span class="tag tag-good">on sale</span>{% else %}<span class="tag">hidden</span>{% endif %}</td>
+        <td class="actions">
+          <a class="button small-button" href="{{ url_for('merchant.product_edit', product_id=p.id) }}">Edit</a>
+          <form method="post" action="{{ url_for('merchant.product_toggle', product_id=p.id) }}" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="small secondary">{{ 'Deactivate' if p.active else 'Activate' }}</button>
+          </form>
+          <form method="post" action="{{ url_for('merchant.product_delete', product_id=p.id) }}" class="inline"
+                data-confirm="Delete {{ p.name }}? Products with sales are deactivated instead.">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="small danger">Delete</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="muted">No products yet. Add your first one above.</p>
+  {% endif %}
+</section>
+{% endblock %}
