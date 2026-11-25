@@ -1,6 +1,8 @@
 """Administrator pages: accounts, cards, settings and audit log."""
 
-from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
+import secrets
+
+from flask import Blueprint, abort, current_app, flash, g, redirect, render_template, request, url_for
 
 from .auth import role_required
 from .banking import (DESK_ACTIONS, BankError, PinError, account_history, assign_card, audit,
@@ -77,9 +79,13 @@ def account_new():
         try:
             initial = parse_amount(form.get("initial_balance"), allow_zero=True)
             card_mode = form.get("card_mode", "generate")
+            pin = form.get("pin")
+            if not pin and not current_app.config["REQUIRE_PIN"]:
+                # PINs are off: store a random one so the account is safe if PINs are re-enabled.
+                pin = f"{secrets.randbelow(10**6):06d}"
             with transaction(conn):
                 account_id = create_account(
-                    conn, name=form.get("name"), role=form.get("role"), pin=form.get("pin"),
+                    conn, name=form.get("name"), role=form.get("role") or "user", pin=pin,
                     initial_cents=initial, actor=g.account,
                 )
                 token = None
@@ -218,6 +224,7 @@ def money_action(action):
             amount_cents=parse_amount(form.get("amount")), reason=form.get("reason", ""),
             to_account_id=form.get("to_account_id", type=int), pin=form.get("pin"),
             idempotency_key=form.get("key") or None, ip=request.remote_addr,
+            require_pin=current_app.config["REQUIRE_PIN"], card_token=form.get("card"),
         )
     except BankError as e:
         if not isinstance(e, PinError):

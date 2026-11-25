@@ -28,6 +28,7 @@
 
 {% if account.role != 'system' %}
 <div class="grid-2">
+  {% if config.REQUIRE_PIN %}
   <section class="card">
     <h2>Reset PIN</h2>
     <form method="post" action="{{ url_for('admin.account_reset_pin', account_id=account.id) }}" autocomplete="off">
@@ -36,6 +37,7 @@
       <button type="submit">Set PIN</button>
     </form>
   </section>
+  {% endif %}
   <section class="card">
     <h2>Account status</h2>
     <form method="post" action="{{ url_for('admin.account_status', account_id=account.id) }}"

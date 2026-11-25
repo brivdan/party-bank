@@ -27,7 +27,7 @@
 {% if order.status == 'open' %}
 <section class="card">
   <h2>Identify the customer</h2>
-  <p class="muted small">Tap the customer's card on this phone, or scan its QR code with the camera.
+  <p class="muted small">Tap the customer's card on this phone, or scan its QR code with the camera{% if not config.REQUIRE_PIN %}: the payment goes through immediately{% endif %}.
     You can also type the card ID.</p>
   <form method="get" action="{{ url_for('merchant.order_pay', order_id=order.id) }}" class="nfc-autosubmit" autocomplete="off">
     <label>Card ID
@@ -35,7 +35,7 @@
     </label>
     <button type="button" id="nfc-scan" class="secondary" hidden>📶 Scan NFC card</button>
     <p id="nfc-status" class="muted small"></p>
-    <button type="submit">Continue to PIN</button>
+    <button type="submit">{{ 'Continue to PIN' if config.REQUIRE_PIN else 'Continue' }}</button>
   </form>
   <form method="post" action="{{ url_for('merchant.order_cancel', order_id=order.id) }}" data-confirm="Cancel this order?">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

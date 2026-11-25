@@ -15,9 +15,19 @@
     <input type="hidden" name="amount_cents" value="{{ amount_cents }}">
     <input type="hidden" name="note" value="{{ note }}">
     <input type="hidden" name="key" value="{{ key }}">
+    {% if require_pin %}
     <label>Your PIN
       <input name="pin" type="password" inputmode="numeric" pattern="\d{4,6}" maxlength="6" required autofocus>
     </label>
+    {% else %}
+    <p><strong>Tap your own card on this phone to confirm.</strong></p>
+    <p class="muted small">Or scan its QR code with the camera, or type your card ID below.</p>
+    <label>Your card ID
+      <input name="card" id="card-input" required placeholder="XXXX-XXXX-XXXX" autocapitalize="characters" spellcheck="false">
+    </label>
+    <button type="button" id="nfc-scan" class="secondary" hidden>📶 Scan NFC card</button>
+    <p id="nfc-status" class="muted small"></p>
+    {% endif %}
     <button type="submit">Send {{ amount_cents|money }}</button>
   </form>
   <p class="center"><a href="{{ url_for('user.dashboard') }}">Cancel</a></p>

@@ -8,6 +8,11 @@
   <a class="button" href="{{ url_for('user.send') }}">Send money</a>
 </section>
 
+<div class="stats">
+  <div class="stat"><span class="pos">{{ stats.earned_cents|money }}</span>Total earned (sales + transfers in)</div>
+  <div class="stat"><span class="neg">{{ stats.spent_cents|money }}</span>Total spent (purchases, transfers out, fees)</div>
+</div>
+
 <section class="card">
   <div class="row-between">
     <h2>Recent activity</h2>
@@ -26,7 +31,7 @@
         <details>
           <summary>Show QR code to pay</summary>
           <img class="qr" src="{{ (settings.base_url ~ '/card/' ~ c.token)|qr }}" alt="QR code for card {{ c.token|card }}">
-          <p class="muted small">The merchant scans this, then you enter your PIN on their terminal.</p>
+          <p class="muted small">The seller scans this to take your payment{% if config.REQUIRE_PIN %}, then you enter your PIN{% endif %}.</p>
         </details>
         {% endif %}</li>
     {% endfor %}

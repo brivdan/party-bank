@@ -23,8 +23,8 @@ class Stage1Test(BankTestCase):
 
     def test_merchant_login(self):
         r = self.card_login(self.client, "DEMOSHOP0001", "9001")
-        self.assertTrue(r.location.endswith("/merchant/"))
-        page = self.client.get("/merchant/").get_data(as_text=True)
+        self.assertTrue(r.location.endswith("/me/"))  # merged participant dashboard
+        page = self.client.get("/me/").get_data(as_text=True)
         self.assertIn("Latte", page)
         self.assertIn("A$4.50", page)
 
@@ -57,11 +57,12 @@ class Stage1Test(BankTestCase):
         self.assertEqual(self.client.get("/admin/").status_code, 302)  # anonymous -> login
         self.card_login(self.client, "DEMOUSER0001", "1111")
         self.assertEqual(self.client.get("/admin/").status_code, 403)
-        self.assertEqual(self.client.get("/merchant/").status_code, 403)
+        # Merged roles: every participant can use the terminal and products pages.
+        self.assertEqual(self.client.get("/merchant/terminal").status_code, 200)
 
         m = self.app.test_client()
         self.card_login(m, "DEMOSHOP0001", "9001")
-        self.assertEqual(m.get("/me/").status_code, 403)
+        self.assertEqual(m.get("/me/").status_code, 200)
         self.assertEqual(m.get("/admin/cards").status_code, 403)
 
     def test_card_url_reveals_nothing(self):

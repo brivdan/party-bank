@@ -8,15 +8,13 @@
     <label>Name
       <input name="name" value="{{ form.get('name', '') }}" required maxlength="80" autofocus>
     </label>
-    <label>Role
-      <select name="role">
-        <option value="user" {% if form.get('role') != 'merchant' %}selected{% endif %}>User (guest)</option>
-        <option value="merchant" {% if form.get('role') == 'merchant' %}selected{% endif %}>Merchant (stall)</option>
-      </select>
-    </label>
+    {# Users and merchants are merged: every participant can buy and sell. #}
+    <input type="hidden" name="role" value="user">
+    {% if config.REQUIRE_PIN %}
     <label>PIN (4–6 digits)
       <input name="pin" type="password" inputmode="numeric" pattern="\d{4,6}" maxlength="6" required>
     </label>
+    {% endif %}
     <label>Opening cash deposit ({{ settings.currency_symbol }}, cash received now)
       <input name="initial_balance" inputmode="decimal" value="{{ form.get('initial_balance', '0') }}">
     </label>

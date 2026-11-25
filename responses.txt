@@ -187,3 +187,36 @@ partybank-backup-before-stage4.db
 
 Est. Credits Used: 37.61
 Elapsed time: 23m 19s
+
+
+
+=== Roles Merge. No PIN ===
+Merged roles
+
+Same experience for everyone: every non-admin account (including former merchants) gets the same navigation: Dashboard, Terminal, Products, Transactions. Anyone can buy, sell and send money from one balance.
+Dashboard: name, balance, total earned (sales and transfers received), total spent (purchases, transfers sent, fees, charges), recent transactions, the Send money button and the card QR code.
+Old merchant dashboard: /merchant/ now redirects to the shared dashboard. Its code is still there.
+Send money: the recipient is chosen from a dropdown of the other active participants by name. Admins, the bank's own accounts, frozen accounts and yourself are left out.
+No-PIN mode
+
+Login: tapping a card opens the dashboard straight away. Typing the card ID also works. Blocked, unknown or frozen cards are refused.
+Payment: the seller creates an order, then the customer taps their card on the seller's phone. The payment goes through immediately and the seller stays logged in. A second tap doesn't charge again. Typing the card ID still shows an Approve button.
+Transfer: choose the recipient and amount, then tap your own card (or type its ID) to confirm. Someone else's card is refused. Tapping again doesn't send twice.
+Still checked on every payment: card and account status, sufficient funds, that the order is still open, and that you can't pay your own order.
+PINs and charges: PIN fields are hidden everywhere. Bank desk charges are confirmed with the account holder's card ID instead of their PIN.
+New accounts: the admin form no longer asks for a role or PIN. A random PIN is stored in case you turn PINs back on.
+Admin login: still needs a username and password.
+What I didn't change: no database migration and no new dependencies. All records, products, settings and the transaction function are unchanged. Setting REQUIRE_PIN = True in 
+__init__.py
+ brings back the original PIN behaviour, and the existing test suites still run in that mode to make sure it works.
+
+Security trade-off: with PINs off, anyone holding a card, or who knows or photographs its card ID or QR code, can log in and spend that balance.
+
+Tests: 16 new tests in 
+test_simplified.py
+ cover login, transfers, payments, product management, balance updates, duplicate charges and admin access. In the older suites I changed only the assertions that expected users and merchants to be locked out of each other's pages.
+
+The live check added three real transactions to your data: Alice sent Bob A$2.00 and bought an espresso from Coffee Corner for A$3.00.
+
+Est. Credits Used: 26.58
+Elapsed time: 18m 8s

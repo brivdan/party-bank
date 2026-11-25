@@ -66,15 +66,21 @@
 
   <section class="card">
     <h2>🧾 Charge an account</h2>
-    <p class="muted small">Bank service charge, paid to the reserve and counted as earnings. The account holder approves with their PIN.</p>
+    <p class="muted small">Bank service charge, paid to the reserve and counted as earnings. The account holder approves with their {{ 'PIN' if config.REQUIRE_PIN else 'card' }}.</p>
     <form method="post" action="{{ url_for('admin.money_action', action='charge') }}" class="once" autocomplete="off">
       {{ form_head('charge') }}
       {{ account_select('account_id', 'Account', include_reserve=False) }}
       {{ amount_field() }}
       <label>Reason (required) <input name="reason" required minlength="3" maxlength="100" placeholder="e.g. Card replacement"></label>
+      {% if config.REQUIRE_PIN %}
       <label>Account holder's PIN
         <input name="pin" type="password" inputmode="numeric" pattern="\d{4,6}" maxlength="6" required>
       </label>
+      {% else %}
+      <label>Account holder's card ID (type or scan)
+        <input name="card" required placeholder="XXXX-XXXX-XXXX" autocapitalize="characters" spellcheck="false">
+      </label>
+      {% endif %}
       <button type="submit">Charge</button>
     </form>
   </section>

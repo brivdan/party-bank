@@ -114,7 +114,7 @@ class Stage3Test(BankTestCase):
         self.assertEqual(tx["description"], "2× Latte, Croissant, Tip")
 
         # In both histories.
-        self.assertIn("2× Latte, Croissant, Tip", self.m.get("/merchant/").get_data(as_text=True))
+        self.assertIn("2× Latte, Croissant, Tip", self.m.get("/me/").get_data(as_text=True))
         alice = self.app.test_client()
         self.card_login(alice, "DEMOUSER0001", "1111")
         alice_page = alice.get("/me/history?dir=out").get_data(as_text=True)
@@ -174,7 +174,7 @@ class Stage3Test(BankTestCase):
         order_id, _ = self.create_order({"Espresso": 1})
         with self.db() as conn:
             conn.execute("UPDATE cards SET status = 'blocked' WHERE token = 'DEMOUSER0002'")
-        for card in ("NOPE12345", "DEMOUSER0002", "DEMOSHOP0002"):
+        for card in ("NOPE12345", "DEMOUSER0002"):
             r = self.m.get(f"/merchant/orders/{order_id}/pay?card={card}")
             self.assertEqual(r.status_code, 302, card)
             self.assertIn("Try another card", self.m.get(r.location).get_data(as_text=True))
@@ -209,10 +209,11 @@ class Stage3Test(BankTestCase):
             post_transaction(conn, kind="purchase", from_id=self.alice["id"], to_id=self.shop["id"],
                              amount_cents=100, actor=self.shop)
 
-    def test_users_cannot_open_terminal(self):
+    def test_any_participant_can_sell(self):
         alice = self.app.test_client()
         self.card_login(alice, "DEMOUSER0001", "1111")
-        self.assertEqual(alice.get("/merchant/terminal").status_code, 403)
+        self.assertEqual(alice.get("/merchant/terminal").status_code, 200)
+        self.assertEqual(alice.get("/merchant/products").status_code, 200)
 
     # --- card tap / QR scan on the merchant phone ---
 
@@ -247,18 +248,16 @@ class Stage3Test(BankTestCase):
         fee_tx = self.query("SELECT * FROM transactions WHERE kind = 'fee'")[0]
         self.assertEqual((fee_tx["from_account_id"], fee_tx["amount_cents"]), (self.shop["id"], 23))
 
-        page = self.m.get("/merchant/").get_data(as_text=True)
-        self.assertIn("A$13.50", page)   # total sales: 4.50 demo + 9.00
-        self.assertIn("A$0.23", page)    # fees paid
-        self.assertIn("A$13.27", page)   # net revenue
-        self.assertRegex(page, r"<span>2</span>Sales transactions")
+        page = self.m.get("/me/").get_data(as_text=True)  # merged participant dashboard
+        self.assertRegex(page, r'<span class="pos">A\$13.50</span>Total earned')  # sales: 4.50 demo + 9.00
+        self.assertRegex(page, r'<span class="neg">A\$0.23</span>Total spent')    # the fee
+        self.assertEqual(merchant_stats_net(self), 13_27)                         # net revenue still computed
         with self.db() as conn:
             self.assertEqual(ledger_problems(conn), [])
 
     def test_fees_hidden_when_disabled(self):
-        page = self.m.get("/merchant/").get_data(as_text=True)
-        self.assertNotIn("Fees paid", page)
-        self.assertIn("Net revenue", page)
+        page = self.m.get("/me/").get_data(as_text=True)
+        self.assertRegex(page, r'<span class="neg">A\$0.00</span>Total spent')
 
     def test_fee_helpers(self):
         self.assertEqual(parse_fee_percent("2.5"), 250)
@@ -268,6 +267,12 @@ class Stage3Test(BankTestCase):
                 parse_fee_percent(bad)
         self.assertEqual(compute_fee(900, 250), 23)
         self.assertEqual(compute_fee(100, 0), 0)
+
+
+def merchant_stats_net(test):
+    from partybank.banking import merchant_stats
+    with test.db() as conn:
+        return merchant_stats(conn, test.shop["id"])["net_cents"]
 
 
 if __name__ == "__main__":

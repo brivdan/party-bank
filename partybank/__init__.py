@@ -13,6 +13,12 @@ from . import db
 from .banking import format_account_number, format_money, format_token
 
 
+# False: a card tap (or typed card ID) is enough to log in, approve a purchase
+# or confirm a transfer. True: the original PIN checks apply everywhere.
+# Admin username/password login is not affected.
+REQUIRE_PIN = False
+
+
 def _load_secret_key(instance_path):
     """Persist the session key so logins survive a server restart."""
     if os.environ.get("PARTYBANK_SECRET_KEY"):
@@ -32,6 +38,7 @@ def create_app(test_config=None):
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
         PERMANENT_SESSION_LIFETIME=timedelta(hours=12),
+        REQUIRE_PIN=REQUIRE_PIN,
     )
     if test_config:
         app.config.update(test_config)

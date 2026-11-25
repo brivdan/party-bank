@@ -221,14 +221,15 @@ def _authorize(conn, kind, actor, src, dst, amount_cents, idempotency_key):
     elif kind == "purchase":
         # A merchant can only collect into its own account, from a customer,
         # for exactly the total of one of its own open orders.
-        allowed = (role == "merchant" and actor["id"] == dst["id"] and src["role"] == "user"
+        # (Users and merchants are merged: any participant can sell to another.)
+        allowed = (participant(actor) and actor["id"] == dst["id"] and participant(src)
                    and idempotency_key is not None
                    and conn.execute(
                        "SELECT 1 FROM orders WHERE payment_key = ? AND merchant_id = ? "
                        "AND status = 'open' AND total_cents = ?",
                        (idempotency_key, actor["id"], amount_cents)).fetchone() is not None)
     elif kind == "fee":
-        allowed = role == "merchant" and actor["id"] == src["id"] and reserve(dst)
+        allowed = participant(actor) and actor["id"] == src["id"] and reserve(dst)
     else:
         allowed = False  # refunds arrive with their feature
     if not allowed:
@@ -586,7 +587,7 @@ def customer_for_card(conn, token):
         "FROM cards c JOIN accounts a ON a.id = c.account_id WHERE c.token = ?",
         (normalize_token(token),),
     ).fetchone()
-    if row is None or row["role"] != "user":
+    if row is None or row["role"] not in PARTICIPANT_ROLES:
         raise BankError("Card not recognised.")
     if row["card_status"] != "active":
         raise BankError("This card is blocked.")
@@ -604,8 +605,35 @@ def _paid_result(order, customer, duplicate):
                          order["fee_cents"], customer["name"], duplicate)
 
 
-def pay_order(conn, *, order_id, card_token, pin, actor, ip=None):
-    """Customer pays a merchant's open order with card + PIN.
+def card_owner_check(conn, token, account_id):
+    """No-PIN confirmation: the scanned card must be an active card of this account."""
+    card = conn.execute("SELECT account_id, status FROM cards WHERE token = ?",
+                        (normalize_token(token),)).fetchone()
+    if card is None or card["account_id"] != account_id:
+        raise PinError("That card does not belong to this account. Scan your own card.")
+    if card["status"] != "active":
+        raise PinError("This card is blocked.")
+
+
+def participant_stats(conn, account_id):
+    """Dashboard totals. Earned: sales and transfers received. Spent: purchases,
+    transfers sent, fees and charges. Cash deposits/withdrawals and bank
+    corrections are not counted."""
+    row = conn.execute(
+        """
+        SELECT
+          (SELECT COALESCE(SUM(amount_cents), 0) FROM transactions WHERE status = 'completed'
+            AND to_account_id = :a AND kind IN ('purchase', 'transfer')) AS earned_cents,
+          (SELECT COALESCE(SUM(amount_cents), 0) FROM transactions WHERE status = 'completed'
+            AND from_account_id = :a AND kind IN ('purchase', 'transfer', 'fee', 'charge')) AS spent_cents
+        """, {"a": account_id},
+    ).fetchone()
+    return dict(row)
+
+
+def pay_order(conn, *, order_id, card_token, pin, actor, ip=None, require_pin=True):
+    """Customer pays a merchant's open order with card + PIN (or just the
+    card when require_pin is False).
 
     One atomic SQLite transaction posts the purchase (customer -> merchant),
     the optional fee (merchant -> reserve) and marks the order paid. Paying
@@ -614,6 +642,8 @@ def pay_order(conn, *, order_id, card_token, pin, actor, ip=None):
     if conn.in_transaction:
         raise RuntimeError("pay_order manages its own transactions")
     customer = customer_for_card(conn, card_token)
+    if customer["id"] == actor["id"]:
+        raise BankError("You can't pay your own order. Scan the customer's card.")
 
     def load_order():
         order = conn.execute(
@@ -627,9 +657,11 @@ def pay_order(conn, *, order_id, card_token, pin, actor, ip=None):
     if order["status"] != "open":  # don't spend a PIN attempt on a finished order
         return _paid_result(order, customer, duplicate=True)
 
-    pin_error = check_pin(conn, customer["id"], pin, f"payment PIN for order #{order_id}", ip)
-    if pin_error:
-        raise PinError(pin_error)
+    if require_pin:
+        pin_error = check_pin(conn, customer["id"], pin, f"payment PIN for order #{order_id}", ip)
+        if pin_error:
+            raise PinError(pin_error)
+    # Without a PIN, scanning the customer's (active, assigned) card is the authorization.
 
     with transaction(conn):
         order = load_order()  # re-check under the write lock
@@ -687,7 +719,7 @@ DESK_ACTIONS = {
 
 
 def desk_action(conn, *, action, actor, account_id, amount_cents, reason="", to_account_id=None,
-                pin=None, idempotency_key=None, ip=None):
+                pin=None, idempotency_key=None, ip=None, require_pin=True, card_token=None):
     """The single entry point for admin money actions. Each one is a normal
     ledger transaction (via post_transaction) plus an audit log entry,
     committed together. Balances are never written directly.
@@ -730,9 +762,12 @@ def desk_action(conn, *, action, actor, account_id, amount_cents, reason="", to_
         # Checked (and counted toward lockout) before anything moves.
         if conn.in_transaction:
             raise RuntimeError("charges check the PIN in their own transaction")
-        pin_error = check_pin(conn, account_id, pin, "charge PIN at the bank desk", ip)
-        if pin_error:
-            raise PinError(pin_error)
+        if require_pin:
+            pin_error = check_pin(conn, account_id, pin, "charge PIN at the bank desk", ip)
+            if pin_error:
+                raise PinError(pin_error)
+        else:  # no-PIN mode: the account holder scans their card instead
+            card_owner_check(conn, card_token, account_id)
 
     with nullcontext() if conn.in_transaction else transaction(conn):
         result = post_transaction(

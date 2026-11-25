@@ -1,7 +1,7 @@
 """Merchant pages: dashboard, product management and the payment terminal."""
 
-from flask import (Blueprint, abort, flash, g, jsonify, redirect, render_template, request,
-                   url_for)
+from flask import (Blueprint, abort, current_app, flash, g, jsonify, redirect, render_template,
+                   request, session, url_for)
 
 from .auth import role_required
 from .banking import (BankError, PinError, account_history, audit, balance_snapshot,
@@ -16,7 +16,7 @@ OPEN_ORDER_MINUTES = 30  # a tapped card is matched to the latest open order thi
 
 
 @bp.before_request
-@role_required("merchant")
+@role_required("user", "merchant")  # merged roles: every participant can sell
 def require_merchant():
     return None
 
@@ -29,6 +29,12 @@ def _audit(conn, action, details=""):
 
 @bp.route("/")
 def dashboard():
+    # Merged roles: the participant dashboard (/me/) replaces this page.
+    # The old merchant dashboard is kept below but no longer linked.
+    return redirect(url_for("user.dashboard"))
+
+
+def merchant_dashboard_legacy():
     conn = get_db()
     return render_template(
         "merchant/dashboard.html", account=g.account,
@@ -161,6 +167,7 @@ def order_create():
         custom = parse_amount(form.get("custom_amount"), allow_zero=True)
         order_id = create_order(conn, merchant=g.account, quantities=quantities,
                                 custom_cents=custom, custom_label=form.get("custom_label"))
+        session.pop("pending_transfer", None)  # the next card tap is for this order
     except BankError as e:
         flash(str(e), "error")
         return redirect(url_for("merchant.terminal"))
@@ -218,10 +225,14 @@ def order_pay(order_id):
 
     if request.method == "GET":
         return render_template("merchant/pay.html", token=token, **_order_context(conn, order))
+    return _pay(conn, order_id, token)
 
+
+def _pay(conn, order_id, token):
     try:
         result = pay_order(conn, order_id=order_id, card_token=token, pin=request.form.get("pin", ""),
-                           actor=g.account, ip=request.remote_addr)
+                           actor=g.account, ip=request.remote_addr,
+                           require_pin=current_app.config["REQUIRE_PIN"])
     except BankError as e:
         if not isinstance(e, PinError):
             with transaction(conn):
@@ -236,15 +247,36 @@ def order_pay(order_id):
 
 @bp.route("/card/<token>")
 def card_tapped(token):
-    """A customer card was tapped/scanned on the merchant's phone: attach it
-    to the most recent open order."""
+    """A card was tapped/scanned on a logged-in participant's phone.
+
+    1. A transfer is waiting for confirmation -> the sender's own card confirms it.
+    2. An open order exists -> the customer's card pays it (with a PIN only if
+       REQUIRE_PIN). The seller stays logged in.
+    3. Otherwise: own card -> dashboard; other card -> explain.
+    """
     conn = get_db()
+    token = normalize_token(token)
+    if session.get("pending_transfer"):
+        return redirect(url_for("user.send_scan", token=token))
     order = conn.execute(
         "SELECT id FROM orders WHERE merchant_id = ? AND status = 'open' "
         "AND created_at > datetime('now', ?) ORDER BY id DESC LIMIT 1",
         (g.account["id"], f"-{OPEN_ORDER_MINUTES} minutes"),
     ).fetchone()
     if order is None:
+        own = conn.execute("SELECT 1 FROM cards WHERE token = ? AND account_id = ?",
+                           (token, g.account["id"])).fetchone()
+        if own:
+            return redirect(url_for("user.dashboard"))
         flash("Card read, but there is no open order. Create the order first, then tap the card.", "error")
         return redirect(url_for("merchant.terminal"))
-    return redirect(url_for("merchant.order_pay", order_id=order["id"], card=normalize_token(token)))
+    if current_app.config["REQUIRE_PIN"]:
+        return redirect(url_for("merchant.order_pay", order_id=order["id"], card=token))
+    # No-PIN mode: the tap is the customer's authorization. Validate the card,
+    # then pay and redirect (the order can only be paid once).
+    try:
+        customer_for_card(conn, token)
+    except BankError as e:
+        flash(f"{e} Try another card.", "error")
+        return redirect(url_for("merchant.order", order_id=order["id"]))
+    return _pay(conn, order["id"], token)

@@ -2,7 +2,7 @@
 
 from functools import wraps
 
-from flask import (Blueprint, abort, flash, g, redirect, render_template, request,
+from flask import (Blueprint, abort, current_app, flash, g, redirect, render_template, request,
                    session, url_for)
 
 from .banking import (LOCK_MINUTES, audit, check_pin, is_locked, normalize_token,
@@ -11,7 +11,8 @@ from .db import get_db, transaction
 
 bp = Blueprint("auth", __name__)
 
-HOME_ENDPOINT = {"admin": "admin.dashboard", "user": "user.dashboard", "merchant": "merchant.dashboard"}
+# Users and merchants are merged into one participant experience (same dashboard).
+HOME_ENDPOINT = {"admin": "admin.dashboard", "user": "user.dashboard", "merchant": "user.dashboard"}
 
 
 
@@ -89,6 +90,27 @@ def confirm_pin(conn, acc, pin, what):
 
 # ---------- card + PIN login (users and merchants) ----------
 
+def login_with_card(token):
+    """No-PIN mode: a scanned card logs its owner in immediately."""
+    conn = get_db()
+    token = normalize_token(token)
+    row = conn.execute(
+        "SELECT c.id AS card_id, c.status AS card_status, a.* "
+        "FROM cards c JOIN accounts a ON a.id = c.account_id WHERE c.token = ?", (token,),
+    ).fetchone()
+    if row is None or row["role"] not in ("user", "merchant"):
+        flash("Card not recognised.", "error")
+    elif row["card_status"] != "active":
+        flash("This card is blocked. Please contact the bank desk.", "error")
+    elif row["status"] != "active":
+        flash("This account is frozen. Please contact the bank desk.", "error")
+    else:
+        _record_success(conn, row, f"card {token} (tap)")
+        _start_session(row, card_id=row["card_id"])
+        return redirect(url_for(HOME_ENDPOINT[row["role"]]))
+    return render_template("login.html", card=token), 401
+
+
 @bp.route("/login", methods=["GET", "POST"])
 def login():
     card_input = request.values.get("card", "")
@@ -102,12 +124,13 @@ def login():
             (token,),
         ).fetchone() if token else None
 
-        error = "Invalid card or PIN."
+        require_pin = current_app.config["REQUIRE_PIN"]
+        error = "Invalid card or PIN." if require_pin else "Card not recognised."
         if row is None or row["role"] not in ("user", "merchant"):
             pass
-        elif _is_locked(conn, row["id"]):
+        elif require_pin and _is_locked(conn, row["id"]):
             error = f"Too many failed attempts. Try again in {LOCK_MINUTES} minutes."
-        elif not verify_secret(row["pin_hash"], pin):
+        elif require_pin and not verify_secret(row["pin_hash"], pin):
             _record_failure(conn, row, f"card {token}")
         elif row["card_status"] != "active":
             error = "This card is blocked. Please contact the bank desk."
@@ -126,10 +149,12 @@ def card_landing(token):
     """Target of the NFC tag / QR URL. Identifies the card only; never
     reveals account data and never authorizes anything without the PIN."""
     acc = g.account
-    if acc is not None and acc["role"] == "merchant":
-        # A merchant's phone read a customer card (NFC tap or camera QR scan):
-        # hand the card to the payment terminal. The customer still needs a PIN.
+    if acc is not None and acc["role"] in ("user", "merchant"):
+        # A participant's phone read a card (NFC tap or camera QR scan): it
+        # confirms their pending transfer or pays their open order.
         return redirect(url_for("merchant.card_tapped", token=normalize_token(token)))
+    if acc is None and not current_app.config["REQUIRE_PIN"]:
+        return login_with_card(token)
     if acc is not None and session.get("card_id") is not None:
         card = get_db().execute("SELECT id FROM cards WHERE token = ?", (normalize_token(token),)).fetchone()
         if card is not None and card["id"] == session["card_id"]:

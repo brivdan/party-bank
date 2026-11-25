@@ -7,8 +7,13 @@
   <p class="muted small">Your balance: <strong>{{ account.balance_cents|money }}</strong></p>
   <form method="post" action="{{ url_for('user.send') }}" autocomplete="off">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label>Recipient account number
-      <input name="to" value="{{ form.get('to', '') }}" required inputmode="numeric" placeholder="e.g. 0004" autofocus>
+    <label>Recipient
+      <select name="to" required autofocus>
+        <option value="">Choose…</option>
+        {% for r in recipients %}
+          <option value="{{ r.id }}" {% if form.get('to', '')|string|int(-1) == r.id %}selected{% endif %}>{{ r.name }}</option>
+        {% endfor %}
+      </select>
     </label>
     <label>Amount ({{ settings.currency_symbol }})
       <input name="amount" value="{{ form.get('amount', '') }}" required inputmode="decimal" placeholder="0.00">
@@ -18,6 +23,6 @@
     </label>
     <button type="submit">Continue</button>
   </form>
-  <p class="muted small">You will see the recipient's name and confirm with your PIN before anything is sent.</p>
+  <p class="muted small">You confirm on the next screen {{ 'with your PIN' if config.REQUIRE_PIN else 'by scanning your own card' }} before anything is sent.</p>
 </section>
 {% endblock %}

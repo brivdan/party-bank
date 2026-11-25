@@ -18,14 +18,11 @@
           <a href="{{ url_for('admin.transactions') }}">Transactions</a>
           <a href="{{ url_for('admin.settings_page') }}">Settings</a>
           <a href="{{ url_for('admin.audit_log') }}">Audit</a>
-        {% elif current_account.role == 'merchant' %}
-          <a href="{{ url_for('merchant.dashboard') }}">Dashboard</a>
+        {% else %}{# users and merchants share one participant navigation #}
+          <a href="{{ url_for('user.dashboard') }}">Dashboard</a>
           <a href="{{ url_for('merchant.terminal') }}">Terminal</a>
           <a href="{{ url_for('merchant.products') }}">Products</a>
-        {% elif current_account.role == 'user' %}
-          <a href="{{ url_for('user.dashboard') }}">Home</a>
-          <a href="{{ url_for('user.send') }}">Send</a>
-          <a href="{{ url_for('user.history') }}">History</a>
+          <a href="{{ url_for('user.history') }}">Transactions</a>
         {% endif %}
         <form method="post" action="{{ url_for('auth.logout') }}" class="inline">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

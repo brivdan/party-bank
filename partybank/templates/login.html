@@ -3,7 +3,7 @@
 {% block content %}
 <section class="card narrow">
   <h1>Log in with your card</h1>
-  {% if from_card %}
+  {% if from_card and config.REQUIRE_PIN %}
     <p class="muted">Card detected. Enter your PIN to continue.</p>
   {% else %}
     <p class="muted">Tap your card, scan its QR code, or type the card ID printed on it.</p>
@@ -17,10 +17,12 @@
     </label>
     <button type="button" id="nfc-scan" class="secondary" hidden>📶 Scan NFC card</button>
     <p id="nfc-status" class="muted small"></p>
+    {% if config.REQUIRE_PIN %}
     <label>PIN
       <input name="pin" type="password" inputmode="numeric" pattern="\d{4,6}" maxlength="6"
              required {% if card %}autofocus{% endif %} placeholder="••••">
     </label>
+    {% endif %}
     <button type="submit">Log in</button>
   </form>
   <p class="muted small center"><a href="{{ url_for('auth.admin_login') }}">Bank staff login</a></p>

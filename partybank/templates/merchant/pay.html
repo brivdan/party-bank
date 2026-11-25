@@ -18,9 +18,13 @@
   <form method="post" action="{{ url_for('merchant.order_pay', order_id=order.id) }}" autocomplete="off" class="once">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="card" value="{{ token }}">
+    {% if config.REQUIRE_PIN %}
     <label>Customer: enter your PIN to approve
       <input name="pin" type="password" inputmode="numeric" pattern="\d{4,6}" maxlength="6" required autofocus placeholder="••••">
     </label>
+    {% else %}
+    <p class="muted small">Customer: tap Approve to pay with this card.</p>
+    {% endif %}
     <button type="submit">Approve payment</button>
   </form>
   <p class="center small">

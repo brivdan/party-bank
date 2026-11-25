@@ -31,8 +31,11 @@ class BankTestCase(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
+    REQUIRE_PIN = True  # Stage 1-4 suites test the PIN path; test_simplified.py tests no-PIN mode
+
     def make_app(self):
-        return create_app({"DATABASE": self.db_path, "SECRET_KEY": "test", "TESTING": True})
+        return create_app({"DATABASE": self.db_path, "SECRET_KEY": "test", "TESTING": True,
+                           "REQUIRE_PIN": self.REQUIRE_PIN})
 
     def db(self):
         return closing(connect(self.db_path))

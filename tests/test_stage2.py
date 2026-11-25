@@ -207,10 +207,10 @@ class Stage2Test(BankTestCase):
                 post_transaction(conn, kind="transfer", from_id=self.alice["id"], to_id=self.bob["id"],
                                  amount_cents=100, actor=self.alice)
 
-    def test_merchant_and_anonymous_cannot_use_send(self):
+    def test_anonymous_cannot_use_send(self):
         m = self.app.test_client()
         self.card_login(m, "DEMOSHOP0001", "9001")
-        self.assertEqual(m.get("/me/send").status_code, 403)
+        self.assertEqual(m.get("/me/send").status_code, 200)  # merged roles: merchants can send too
         anon = self.app.test_client()
         self.assertEqual(anon.get("/me/send").status_code, 302)
 
