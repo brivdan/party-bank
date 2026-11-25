@@ -36,3 +36,6 @@ instance/
 # Temporary files
 tmp/
 temp/
+
+# Kiro logs
+responses.txt

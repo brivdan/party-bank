@@ -3,7 +3,7 @@
 {% block content %}
 <p><a href="{{ url_for('user.dashboard') }}">← Back</a></p>
 <section class="card narrow">
-  <h1>Send money</h1>
+  <h1><span class="ico" aria-hidden="true">💸</span> Send money</h1>
   <p class="muted small">Your balance: <strong>{{ account.balance_cents|money }}</strong></p>
   <form method="post" action="{{ url_for('user.send') }}" autocomplete="off">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

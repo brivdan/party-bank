@@ -3,7 +3,7 @@
 {% block content %}
 <section class="card">
   <div class="row-between">
-    <h1>New order</h1>
+    <h1><span class="ico" aria-hidden="true">🛒</span> New order</h1>
     <a href="{{ url_for('merchant.products') }}">Manage products</a>
   </div>
   <form method="post" action="{{ url_for('merchant.order_create') }}" id="terminal" autocomplete="off"
@@ -28,7 +28,7 @@
     {% endif %}
 
     <fieldset>
-      <legend>Custom amount</legend>
+      <legend><span class="ico" aria-hidden="true">✏️</span> Custom amount</legend>
       <div class="inline-grid">
         <label>Amount ({{ settings.currency_symbol }})
           <input name="custom_amount" class="custom-amount" inputmode="decimal" placeholder="0.00">
@@ -41,13 +41,13 @@
 
     <p class="order-total">Total: <strong id="order-total">{{ 0|money }}</strong></p>
     <p class="muted small">The final total is calculated by the server from current prices.</p>
-    <button type="submit">Charge customer →</button>
+    <button type="submit"><span class="ico" aria-hidden="true">💳</span> Charge customer →</button>
   </form>
 </section>
 
 {% if recent %}
 <section class="card">
-  <h2>Recent orders</h2>
+  <h2><span class="ico" aria-hidden="true">🧾</span> Recent orders</h2>
   <div class="table-wrap">
   <table>
     <thead><tr><th>Order</th><th>When</th><th class="num">Total</th><th>Status</th><th>Customer</th></tr></thead>

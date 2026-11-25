@@ -2,7 +2,7 @@
 {% block title %}Cards · {{ settings.party_name }}{% endblock %}
 {% block content %}
 <section class="card">
-  <h1>Register cards</h1>
+  <h1><span class="ico" aria-hidden="true">💳</span> Register cards</h1>
   <p class="muted small">Write only the URL shown below to each NFC tag (NDEF URL record) or QR code.
     Balances, PINs and names stay in the database.</p>
   <form method="post" class="register-form" autocomplete="off">
@@ -24,7 +24,7 @@
 
 <section class="card">
   <div class="row-between">
-    <h2>All cards</h2>
+    <h2><span class="ico" aria-hidden="true">🗂️</span> All cards</h2>
     <a href="{{ url_for('admin.cards_print') }}">?? Print QR codes (all active)</a>
   </div>
   <input type="search" class="filter" data-filter="#cards-table" placeholder="Filter by card ID or name…">

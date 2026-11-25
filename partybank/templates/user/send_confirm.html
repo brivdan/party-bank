@@ -2,7 +2,7 @@
 {% block title %}Confirm payment · {{ settings.party_name }}{% endblock %}
 {% block content %}
 <section class="card narrow">
-  <h1>Confirm payment</h1>
+  <h1><span class="ico" aria-hidden="true">✅</span> Confirm payment</h1>
   <dl class="summary">
     <dt>To</dt><dd><strong>{{ recipient.name }}</strong> <span class="muted">· {{ recipient.id|acctno }}</span></dd>
     <dt>Amount</dt><dd class="big">{{ amount_cents|money }}</dd>

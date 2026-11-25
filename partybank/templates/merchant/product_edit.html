@@ -3,7 +3,7 @@
 {% block content %}
 <p><a href="{{ url_for('merchant.products') }}">← Products</a></p>
 <section class="card narrow">
-  <h1>Edit product</h1>
+  <h1><span class="ico" aria-hidden="true">✏️</span> Edit product</h1>
   <form method="post" autocomplete="off">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Name

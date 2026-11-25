@@ -2,7 +2,7 @@
 {% block title %}Admin login · {{ settings.party_name }}{% endblock %}
 {% block content %}
 <section class="card narrow">
-  <h1>Bank staff login</h1>
+  <h1><span class="ico" aria-hidden="true">🔐</span> Bank staff login</h1>
   <form method="post" action="{{ url_for('auth.admin_login', next=request.args.get('next')) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Username

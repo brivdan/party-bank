@@ -2,7 +2,7 @@
 {% block title %}Settings · {{ settings.party_name }}{% endblock %}
 {% block content %}
 <section class="card narrow">
-  <h1>Settings</h1>
+  <h1><span class="ico" aria-hidden="true">⚙️</span> Settings</h1>
   <form method="post">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Party name

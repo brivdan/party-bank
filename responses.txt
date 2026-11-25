@@ -220,3 +220,26 @@ The live check added three real transactions to your data: Alice sent Bob A$2.00
 
 Est. Credits Used: 26.58
 Elapsed time: 18m 8s
+
+
+
+
+=== New design code ===
+The new look is in place. It mixes your references: magazine-cover headlines, Win98 popup windows and a pink-to-sky-blue background with clouds. All 82 tests still pass. I checked screenshots of the login, dashboard, terminal and payment receipt pages, rendered from a throwaway demo database.
+
+What changed
+
+Background: a pink-to-blue sky with soft white clouds, drawn in CSS with no images. It stays fixed while you scroll and works on iPhone.
+Headlines: bold yellow letters with an outline and a pink-and-dark "extruded" 3D shadow, like the МОЛОТОК and СИРЕНА covers.
+Top bar: a purple → pink → orange header with the Party Bank wordmark tilted. The menu items are grey Win98-style buttons.
+Cards: every panel is a Win98 window with a blue title bar, _ □ ✕ buttons, a thick dark border and a hard drop shadow.
+Messages: green "✔ Yay!" and red "⚠ Oops!" popups. Approved and declined payments get green and red windows.
+Dashboard: the balance sits on a purple panel with big yellow numbers and a yellow "WOW!" starburst sticker. The earned and spent totals are tilted yellow and cyan stickers.
+Terminal: each product is a coloured tile with a red price badge, like the "100" / "66" stickers in BUY OR DIE. Selected products get a dashed pink outline, and the total is a tilted yellow label.
+Buttons, fields, tags: chunky yellow-to-orange buttons that press in when tapped, sunken Win98-style input fields, typewriter-style tags, and purple table headers.
+Icons: emoji in the navigation and page headings (🏠 🛒 📦 📜 💸 💳 🏦 🏆 ⚙️ 🕵️ 🚪 and more). They're built into iPhone and Windows, so nothing extra is downloaded.
+Fonts: I used fonts already on the devices instead of web fonts, so everything works offline at the party. Windows uses Impact and Comic Sans. On iPhone, headlines fall back to Futura Condensed ExtraBold and body text to Chalkboard SE. I haven't seen it on a real iPhone yet, so check the look there.
+
+Files: only style.css was rewritten. The templates just gained icons. No logic, routes or data changed, and print pages still come out plain white.
+
+The server is stopped. Start it with .\.venv\Scripts\python.exe app.py, then open http://172.20.10.2:5000 on your iPhone.

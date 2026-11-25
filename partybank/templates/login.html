@@ -2,7 +2,7 @@
 {% block title %}Log in · {{ settings.party_name }}{% endblock %}
 {% block content %}
 <section class="card narrow">
-  <h1>Log in with your card</h1>
+  <h1><span class="ico" aria-hidden="true">💳</span> Log in with your card</h1>
   {% if from_card and config.REQUIRE_PIN %}
     <p class="muted">Card detected. Enter your PIN to continue.</p>
   {% else %}

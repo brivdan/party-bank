@@ -5,7 +5,7 @@
   <p class="muted">Hello, {{ account.name }}</p>
   <p class="balance">{{ account.balance_cents|money }}</p>
   <p class="muted small">Available balance · Account no. <strong>{{ account.id|acctno }}</strong></p>
-  <a class="button" href="{{ url_for('user.send') }}">Send money</a>
+  <a class="button" href="{{ url_for('user.send') }}"><span class="ico" aria-hidden="true">💸</span> Send money</a>
 </section>
 
 <div class="stats">
@@ -15,14 +15,14 @@
 
 <section class="card">
   <div class="row-between">
-    <h2>Recent activity</h2>
+    <h2><span class="ico" aria-hidden="true">📜</span> Recent activity</h2>
     <a href="{{ url_for('user.history') }}">All transactions →</a>
   </div>
   {% include "_history.html" %}
 </section>
 
 <section class="card">
-  <h2>My cards</h2>
+  <h2><span class="ico" aria-hidden="true">💳</span> My cards</h2>
   <ul class="plain">
     {% for c in cards %}
       <li><code>{{ c.token|card }}</code>

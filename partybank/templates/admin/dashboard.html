@@ -18,7 +18,7 @@
 
 <div class="grid-2">
   <section class="card">
-    <h2>Bank accounts</h2>
+    <h2><span class="ico" aria-hidden="true">🏦</span> Bank accounts</h2>
     <table>
       <tbody>
       {% for b in bank_accounts %}
@@ -35,7 +35,7 @@
   </section>
 
   <section class="card">
-    <h2>Ranking by balance</h2>
+    <h2><span class="ico" aria-hidden="true">🏆</span> Ranking by balance</h2>
     {% if ranking %}
     <table>
       <tbody>
@@ -54,7 +54,7 @@
 
 <section class="card">
   <div class="row-between">
-    <h2>All accounts</h2>
+    <h2><span class="ico" aria-hidden="true">👥</span> All accounts</h2>
     <a class="button" href="{{ url_for('admin.account_new') }}">+ New account</a>
   </div>
   <input type="search" class="filter" data-filter="#accounts-table" placeholder="Filter by name…">

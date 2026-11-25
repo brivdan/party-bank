@@ -17,7 +17,7 @@
 {% endif %}
 
 <section class="card">
-  <h2>Order #{{ order.id }}</h2>
+  <h2><span class="ico" aria-hidden="true">🧾</span> Order #{{ order.id }}</h2>
   {% include "merchant/_order_items.html" %}
   {% if fee_cents %}
     <p class="muted small">Bank fee {{ fee_cents|money }} · you receive {{ (order.total_cents - fee_cents)|money }}</p>
@@ -26,7 +26,7 @@
 
 {% if order.status == 'open' %}
 <section class="card">
-  <h2>Identify the customer</h2>
+  <h2><span class="ico" aria-hidden="true">📶</span> Identify the customer</h2>
   <p class="muted small">Tap the customer's card on this phone, or scan its QR code with the camera{% if not config.REQUIRE_PIN %}: the payment goes through immediately{% endif %}.
     You can also type the card ID.</p>
   <form method="get" action="{{ url_for('merchant.order_pay', order_id=order.id) }}" class="nfc-autosubmit" autocomplete="off">

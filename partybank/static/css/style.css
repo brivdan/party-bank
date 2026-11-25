@@ -1,159 +1,325 @@
+/* Party Bank: Y2K magazine + Win98 popup look.
+   Pink gradient background, bold colours, chunky
+   "3D" headline type and hard drop shadows. No web fonts or images, so it
+   works offline: every font below ships with Windows or iOS. */
+
 :root {
-  --bg: #f4f5f7;
-  --fg: #1d2330;
-  --muted: #6b7280;
-  --card: #fff;
-  --line: #e3e6ea;
-  --brand: #1f4fd1;
-  --good: #11803b;
-  --bad: #c0262d;
-  --radius: 10px;
+  --ink: #1a0a3d;          /* outlines and text */
+  --paper: #ffffff;
+  --muted: #5b4a7a;
+  --line: #d9cdf0;
+  --pink: #ff2fa8;
+  --hot: #ff007f;
+  --yellow: #ffe600;
+  --orange: #ff8a00;
+  --cyan: #00d4ff;
+  --blue: #2d5bff;
+  --purple: #7b2ff7;
+  --lime: #6dff3d;
+  --win: #c0c0c0;           /* Win98 grey */
+  --title: linear-gradient(90deg, #000080, #1084d0);
+  --good: #0a8a2a;
+  --bad: #e0002a;
+  --shadow: 5px 5px 0 var(--ink);
+
+  /* Playful type: heavy condensed headlines, comic body, typewriter stickers. */
+  --font-head: Impact, Haettenschweiler, "Futura-CondensedExtraBold", "AvenirNextCondensed-Heavy",
+               "Arial Narrow Bold", "Arial Black", sans-serif;
+  --font-body: "Comic Sans MS", "Chalkboard SE", "Comic Neue", "Trebuchet MS", sans-serif;
+  --font-type: "Courier New", Courier, monospace;
 }
 
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
-  font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  background: var(--bg);
-  color: var(--fg);
+  font: 16px/1.45 var(--font-body);
+  color: var(--ink);
+  background: #ffb6e9;
+  min-height: 100vh;
 }
-a { color: var(--brand); }
-h1 { font-size: 1.4rem; margin: 0 0 .5rem; }
-h2 { font-size: 1.15rem; margin: 0 0 .75rem; }
-h3 { font-size: 1rem; margin: 1rem 0 .5rem; }
-code { font-family: ui-monospace, Consolas, monospace; background: #f0f2f5; padding: 1px 4px; border-radius: 4px; word-break: break-all; }
 
+/* Pink gradient background. A fixed layer (rather than
+   background-attachment: fixed) so it also works on iPhone. */
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(180deg, #ff7fd0 0%, #ffa6e0 35%, #ffc4ee 65%, #ff8fd6 100%);
+}
+
+a { color: var(--blue); font-weight: 700; }
+a:hover { color: var(--hot); }
+
+/* Headlines: yellow letters, pink + ink "extruded" shadow like the magazine covers. */
+h1, h2, h3 { font-family: var(--font-head); font-weight: 900; letter-spacing: .02em; line-height: 1.1; }
+h1 {
+  font-size: 2rem; margin: 0 0 .6rem; color: var(--yellow);
+  -webkit-text-stroke: 1.5px var(--ink);
+  text-shadow: 2px 2px 0 var(--hot), 4px 4px 0 var(--ink);
+  text-transform: uppercase;
+}
+h2 { font-size: 1.45rem; margin: 0 0 .75rem; color: var(--purple); text-transform: uppercase;
+     text-shadow: 2px 2px 0 var(--cyan); }
+h3 { font-size: 1.15rem; margin: 1rem 0 .5rem; color: var(--hot); }
+code { font-family: var(--font-type); font-weight: 700; background: var(--yellow); color: var(--ink);
+       padding: 1px 5px; border: 1.5px solid var(--ink); word-break: break-all; }
+
+/* ---------- top bar: magazine masthead + Win98 buttons ---------- */
 .topbar {
-  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem;
-  padding: .75rem 1rem; background: var(--brand); color: #fff;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .6rem;
+  padding: .6rem 1rem; color: #fff;
+  background: linear-gradient(90deg, var(--purple), var(--hot) 55%, var(--orange));
+  border-bottom: 4px solid var(--ink);
 }
-.topbar .brand { color: #fff; font-weight: 700; text-decoration: none; }
-.topbar nav { display: flex; flex-wrap: wrap; align-items: center; gap: .9rem; }
-.topbar nav a, .topbar .link { color: #fff; text-decoration: none; }
+.topbar .brand {
+  font-family: var(--font-head); font-size: 1.9rem; text-decoration: none; text-transform: uppercase;
+  color: var(--yellow); -webkit-text-stroke: 1.5px var(--ink);
+  text-shadow: 3px 3px 0 var(--cyan), 5px 5px 0 var(--ink);
+  transform: rotate(-2deg); display: inline-block;
+}
+.topbar nav { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+.topbar nav a, .topbar .link {
+  /* raised Win98 button */
+  display: inline-block; padding: .3rem .6rem; font-family: var(--font-body); font-size: .9rem;
+  font-weight: 700; color: var(--ink); text-decoration: none; background: var(--win);
+  border: 2px solid; border-color: #fff #404040 #404040 #fff; box-shadow: 1px 1px 0 #000;
+}
+.topbar nav a:hover, .topbar .link:hover { background: var(--yellow); color: var(--ink); }
+.topbar nav a:active, .topbar .link:active { border-color: #404040 #fff #fff #404040; }
 
-.container { max-width: 960px; margin: 0 auto; padding: 1rem; }
-.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem; margin-bottom: 1rem; }
-.narrow { max-width: 420px; margin-left: auto; margin-right: auto; }
+/* ---------- layout ---------- */
+.container { max-width: 960px; margin: 0 auto; padding: 1.2rem 1rem 2rem; }
+
+/* Every card is a Win98 popup window with a blue title bar and _ [] X buttons. */
+.card {
+  position: relative; background: var(--paper); margin-bottom: 1.3rem;
+  border: 3px solid var(--ink); box-shadow: var(--shadow);
+  padding: 2.4rem 1rem 1rem;
+}
+.card::before {
+  content: "★ Party Bank"; position: absolute; top: 0; left: 0; right: 0; height: 1.7rem;
+  padding: .2rem .5rem; background: var(--title); color: #fff;
+  font: 700 .85rem/1.3rem var(--font-type); border-bottom: 3px solid var(--ink);
+}
+.card::after {
+  content: "_ □ ✕"; position: absolute; top: .22rem; right: .35rem; padding: 0 .35rem;
+  font: 700 .75rem/1.15rem var(--font-type); color: var(--ink); background: var(--win);
+  border: 2px solid; border-color: #fff #404040 #404040 #fff; letter-spacing: .25rem;
+}
+.narrow { max-width: 440px; margin-left: auto; margin-right: auto; }
 .center { text-align: center; }
 .muted { color: var(--muted); }
 .small { font-size: .85rem; }
 .nowrap { white-space: nowrap; }
 .row-between { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .5rem; }
-.grid-2 { display: grid; gap: 0 1rem; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.grid-2 { display: grid; gap: 0 1.2rem; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
 
-.balance-card { text-align: center; }
-.balance-card p { margin: .2rem 0; }
-.balance { font-size: 2.2rem; font-weight: 700; margin: 0; }
-
-.stats { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); margin-bottom: 1rem; }
-.stat { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: .75rem; color: var(--muted); font-size: .85rem; }
-.stat span { display: block; font-size: 1.3rem; font-weight: 700; color: var(--fg); }
-
-/* forms */
-label { display: block; margin-bottom: .75rem; font-weight: 600; font-size: .95rem; }
-label.radio { font-weight: normal; margin-bottom: .4rem; }
-input, select {
-  display: block; width: 100%; margin-top: .3rem; padding: .65rem .7rem;
-  font: inherit; border: 1px solid #c9ced6; border-radius: 8px; background: #fff;
+/* ---------- balance: magazine cover panel with a starburst sticker ---------- */
+.balance-card {
+  text-align: center; color: #fff; overflow: visible;
+  background: radial-gradient(circle at 30% 20%, #b26bff, var(--purple) 45%, #3a0ca3);
 }
-input[type=radio] { display: inline; width: auto; margin: 0 .4rem 0 0; }
-input:focus, select:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
-fieldset { border: 1px solid var(--line); border-radius: 8px; margin: 0 0 1rem; padding: .75rem; }
-legend { font-weight: 600; padding: 0 .3rem; }
+.balance-card::before { content: "★ My money"; }
+.balance-card p { margin: .2rem 0; }
+.balance-card .muted { color: #f3e8ff; }
+.balance-card strong { color: var(--yellow); }
+.balance {
+  font-family: var(--font-head); font-size: 3.2rem; margin: 0; color: var(--yellow);
+  -webkit-text-stroke: 2px var(--ink); text-shadow: 3px 3px 0 var(--hot), 6px 6px 0 var(--ink);
+}
+.balance-card .balance { transform: rotate(-2deg); }
+.small-balance { font-size: 1.6rem; -webkit-text-stroke: 1px var(--ink); text-shadow: 2px 2px 0 var(--hot); }
+.balance-card[data-balance-url] .balance::after {
+  /* "WOW!" starburst sticker */
+  content: "WOW!"; position: absolute; margin: -.6rem 0 0 .4rem; width: 3.6rem; height: 3.6rem;
+  display: inline-grid; place-items: center; font: 900 .8rem var(--font-head); color: var(--hot);
+  -webkit-text-stroke: 0; text-shadow: none; background: var(--yellow); transform: rotate(14deg);
+  clip-path: polygon(50% 0, 61% 18%, 82% 9%, 79% 31%, 100% 38%, 84% 54%, 97% 73%, 75% 75%, 72% 97%,
+                     54% 85%, 38% 100%, 31% 79%, 9% 85%, 16% 63%, 0 50%, 16% 37%, 7% 16%, 29% 19%, 38% 0);
+}
+
+/* ---------- stat stickers ---------- */
+.stats { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 1.3rem; }
+.stat {
+  padding: .8rem; font-weight: 700; font-size: .85rem; color: var(--ink);
+  border: 3px solid var(--ink); box-shadow: var(--shadow); background: var(--yellow);
+}
+.stat:nth-child(4n+1) { background: var(--yellow); transform: rotate(-1.5deg); }
+.stat:nth-child(4n+2) { background: var(--cyan); transform: rotate(1deg); }
+.stat:nth-child(4n+3) { background: #ff9ad5; transform: rotate(-.5deg); }
+.stat:nth-child(4n+4) { background: var(--lime); transform: rotate(1.5deg); }
+.stat span { display: block; font-family: var(--font-head); font-size: 1.7rem; color: var(--ink); }
+.stat span.pos { color: var(--good); }
+.stat span.neg { color: var(--bad); }
+
+/* ---------- forms: Win98 sunken fields, chunky buttons ---------- */
+label { display: block; margin-bottom: .8rem; font-weight: 700; font-size: .95rem; }
+label.radio { font-weight: 400; margin-bottom: .4rem; }
+input, select {
+  display: block; width: 100%; margin-top: .3rem; padding: .6rem .7rem;
+  font: 700 1rem var(--font-body); color: var(--ink); background: #fff;
+  border: 2px solid; border-color: #404040 #fff #fff #404040; box-shadow: inset 1px 1px 0 #000;
+  border-radius: 0;
+}
+input[type=radio], input[type=checkbox] { display: inline; width: auto; margin: 0 .4rem 0 0; box-shadow: none; }
+input:focus, select:focus { outline: 3px solid var(--pink); outline-offset: 1px; }
+fieldset { border: 3px dashed var(--purple); margin: 0 0 1rem; padding: .75rem; }
+legend { font-family: var(--font-head); font-size: 1.1rem; color: var(--hot); padding: 0 .3rem; text-transform: uppercase; }
 fieldset input:not([type=radio]) { margin-bottom: .5rem; }
 form.inline { display: inline; margin: 0; }
-.filter { margin: 0 0 .75rem; }
+.filter { margin: 0 0 .9rem; }
 
 button, .button {
-  display: inline-block; width: 100%; padding: .7rem 1rem; margin: .25rem 0;
-  font: inherit; font-weight: 600; color: #fff; background: var(--brand);
-  border: 0; border-radius: 8px; cursor: pointer; text-align: center; text-decoration: none;
+  display: inline-block; width: 100%; padding: .7rem 1rem; margin: .35rem 0;
+  font: 900 1.15rem/1.2 var(--font-head); letter-spacing: .04em; text-transform: uppercase;
+  color: var(--ink); background: linear-gradient(180deg, #fff36b, var(--yellow) 45%, var(--orange));
+  border: 3px solid var(--ink); border-radius: 0; box-shadow: 4px 4px 0 var(--ink);
+  cursor: pointer; text-align: center; text-decoration: none;
+  transition: transform .05s, box-shadow .05s;
 }
+button:hover, .button:hover { background: linear-gradient(180deg, #ffd1ef, var(--pink)); color: var(--ink); }
+button:active, .button:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--ink); }
 .button { width: auto; }
-button.secondary { background: #e7ebf3; color: var(--fg); }
-button.danger { background: var(--bad); }
-button.small { width: auto; padding: .35rem .6rem; font-size: .85rem; margin: .1rem; }
-button.link { background: none; width: auto; padding: 0; margin: 0; font-weight: normal; }
+button.secondary, .secondary-button {
+  background: var(--win); color: var(--ink); font-family: var(--font-body); font-weight: 700;
+  text-transform: none; letter-spacing: 0; border-color: var(--ink);
+}
+button.danger { background: linear-gradient(180deg, #ff6b8b, var(--bad)); color: #fff; }
+button.small, .small-button { width: auto; padding: .3rem .6rem; font-size: .85rem; margin: .15rem; box-shadow: 2px 2px 0 var(--ink); }
+button.link {
+  /* the topbar "Log out" keeps its Win98 look (styled above) */
+  width: auto; margin: 0; box-shadow: 1px 1px 0 #000; transform: none;
+}
+button:disabled { opacity: .6; cursor: wait; }
 .actions { white-space: nowrap; text-align: right; }
+.button.wide { display: block; width: 100%; }
 
-/* tables */
+/* ---------- tables ---------- */
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: .92rem; }
-th, td { text-align: left; padding: .5rem .4rem; border-bottom: 1px solid var(--line); vertical-align: top; }
-th { color: var(--muted); font-weight: 600; font-size: .8rem; text-transform: uppercase; }
-.num { text-align: right; white-space: nowrap; }
+th, td { text-align: left; padding: .5rem .45rem; border-bottom: 2px dotted var(--line); vertical-align: top; }
+thead th {
+  color: #fff; background: var(--purple); font: 700 .8rem var(--font-type); text-transform: uppercase;
+  border-bottom: 3px solid var(--ink);
+}
+tbody tr:nth-child(even) td { background: #fbf3ff; }
+.num { text-align: right; white-space: nowrap; font-weight: 700; }
 .pos { color: var(--good); }
 .neg { color: var(--bad); }
 
-.tag { display: inline-block; padding: 0 .45rem; border-radius: 99px; background: #eef0f3; color: var(--muted); font-size: .75rem; }
-.tag-good { background: #e3f4e8; color: var(--good); }
-.tag-bad { background: #fbe5e6; color: var(--bad); }
+/* Typewriter stickers ("Эксклюзив!" labels on the cover). */
+.tag {
+  display: inline-block; padding: 0 .4rem; font: 700 .75rem var(--font-type); color: var(--ink);
+  background: #fff; border: 1.5px solid var(--ink); transform: rotate(-2deg);
+}
+.tag-good { background: var(--lime); }
+.tag-bad { background: var(--bad); color: #fff; }
 
 ul.plain { list-style: none; padding: 0; margin: 0; }
-ul.plain li { padding: .35rem 0; border-bottom: 1px solid var(--line); }
+ul.plain li { padding: .45rem 0; border-bottom: 2px dotted var(--line); }
 
-.flash { padding: .7rem 1rem; border-radius: 8px; margin-bottom: 1rem; background: #e8eefc; }
-.flash-error { background: #fbe5e6; color: var(--bad); }
-.flash-success { background: #e3f4e8; color: var(--good); }
+/* Flash messages are little Win98 alert popups. */
+.flash {
+  position: relative; padding: 2.1rem 1rem .8rem; margin-bottom: 1.1rem; font-weight: 700;
+  background: #fff; border: 3px solid var(--ink); box-shadow: var(--shadow);
+}
+.flash::before {
+  content: "ℹ Message"; position: absolute; top: 0; left: 0; right: 0; padding: .15rem .5rem;
+  background: var(--title); color: #fff; font: 700 .85rem var(--font-type); border-bottom: 3px solid var(--ink);
+}
+.flash-error { background: #ffe0ea; color: var(--bad); }
+.flash-error::before { content: "⚠ Oops!"; background: linear-gradient(90deg, #a00020, var(--hot)); }
+.flash-success { background: #e4ffd9; color: var(--good); }
+.flash-success::before { content: "✔ Yay!"; background: linear-gradient(90deg, #087a26, #33c25a); }
 
 .copy { cursor: pointer; }
 
-.balance-card .button { margin-top: .75rem; min-width: 60%; }
-.small-balance { font-size: 1.3rem; }
-.dir-icon { display: inline-block; width: 1.1em; font-weight: 700; }
+/* Emoji icons: no outline/extrusion, so they keep their own colours. */
+.ico { -webkit-text-stroke: 0; text-shadow: none; font-style: normal; display: inline-block; }
+h1 .ico, h2 .ico { transform: rotate(-8deg); filter: drop-shadow(2px 2px 0 var(--ink)); }
+
+.balance-card .button { margin-top: .9rem; min-width: 60%; }
+.dir-icon { display: inline-block; width: 1.2em; font-weight: 900; font-size: 1.1rem; }
 .dir-in .dir-icon { color: var(--good); }
 .dir-out .dir-icon { color: var(--bad); }
 
-.tabs { display: flex; gap: .25rem; margin: 0 0 .75rem; border-bottom: 1px solid var(--line); }
-.tabs a { padding: .45rem .8rem; text-decoration: none; color: var(--muted); border-bottom: 2px solid transparent; }
-.tabs a.active { color: var(--brand); border-bottom-color: var(--brand); font-weight: 600; }
+.tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0 0 .9rem; }
+.tabs a {
+  padding: .35rem .8rem; text-decoration: none; color: var(--ink); background: var(--win);
+  border: 2px solid; border-color: #fff #404040 #404040 #fff;
+}
+.tabs a.active { background: var(--yellow); border-color: var(--ink); box-shadow: 2px 2px 0 var(--ink); }
 
 dl.summary { display: grid; grid-template-columns: auto 1fr; gap: .4rem 1rem; margin: 0 0 1rem; }
-dl.summary dt { color: var(--muted); }
+dl.summary dt { color: var(--muted); font-weight: 700; }
 dl.summary dd { margin: 0; }
-dl.summary .big { font-size: 1.6rem; font-weight: 700; }
+dl.summary .big { font-size: 1.9rem; }
 
-button:disabled { opacity: .6; cursor: wait; }
-
-/* merchant: products + terminal */
+/* ---------- terminal + products ---------- */
 .inline-grid { display: grid; gap: 0 .75rem; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); align-items: end; }
-.inline-grid button { margin-bottom: .75rem; }
-.small-button { padding: .35rem .6rem; font-size: .85rem; margin: .1rem; width: auto; }
-.secondary-button { background: #e7ebf3; color: var(--fg); }
-.button.wide { display: block; width: 100%; }
-tr.inactive td { color: var(--muted); }
+.inline-grid button { margin-bottom: .8rem; }
+tr.inactive td { color: var(--muted); text-decoration: line-through; }
 
 .pos-list { list-style: none; margin: 0 0 1rem; padding: 0; }
-.pos-item { display: flex; justify-content: space-between; align-items: center; gap: .5rem;
-            padding: .5rem 0; border-bottom: 1px solid var(--line); }
-.pos-item.selected .pos-name { font-weight: 700; }
+.pos-item {
+  display: flex; justify-content: space-between; align-items: center; gap: .5rem;
+  padding: .55rem .6rem; margin-bottom: .55rem; background: #fff7c2;
+  border: 2px solid var(--ink); box-shadow: 3px 3px 0 var(--ink);
+}
+.pos-item:nth-child(3n+2) { background: #d8f6ff; }
+.pos-item:nth-child(3n+3) { background: #ffe0f3; }
+.pos-item.selected { background: var(--yellow); outline: 3px dashed var(--hot); outline-offset: 2px; }
+.pos-name { font-weight: 700; }
+.pos-name .small {
+  /* price badge, like the "100" / "66" stickers */
+  display: inline-block; margin-top: .15rem; padding: 0 .5rem; font: 900 1rem var(--font-head);
+  color: var(--bad); background: #fff; border: 2px solid var(--ink); border-radius: 99px;
+}
 .qty-control { display: flex; align-items: center; gap: .3rem; }
-.qty-control .qty { width: 3.2rem; text-align: center; margin: 0; padding: .5rem .2rem; }
-.qty-btn { width: 2.6rem; height: 2.6rem; padding: 0; margin: 0; font-size: 1.3rem; line-height: 1; }
-.order-total { font-size: 1.3rem; margin: .5rem 0 0; }
+.qty-control .qty { width: 3.2rem; text-align: center; margin: 0; padding: .45rem .2rem; }
+.qty-btn { width: 2.6rem; height: 2.6rem; padding: 0; margin: 0; font-size: 1.5rem; line-height: 1; box-shadow: 2px 2px 0 var(--ink); }
+.order-total {
+  display: inline-block; font-family: var(--font-head); font-size: 1.6rem; margin: .7rem 0 0;
+  padding: .2rem .8rem; background: var(--yellow); border: 3px solid var(--ink); transform: rotate(-1.5deg);
+}
 
-table.order-items td, table.order-items th { border-bottom: 1px solid var(--line); }
-table.order-items tfoot th { font-size: 1rem; color: var(--fg); text-transform: none; }
+table.order-items td, table.order-items th { border-bottom: 2px dotted var(--line); }
+table.order-items tfoot th { font: 900 1.2rem var(--font-head); color: var(--ink); text-transform: uppercase; }
 
-.big { font-size: 2rem; font-weight: 700; margin: .25rem 0; }
+.big {
+  font-family: var(--font-head); font-size: 2.6rem; margin: .25rem 0; color: var(--yellow);
+  -webkit-text-stroke: 1.5px var(--ink); text-shadow: 3px 3px 0 var(--hot), 5px 5px 0 var(--ink);
+}
+
+/* Payment result popups. */
 .result { text-align: center; }
 .result h1 { margin: 0; }
-.result-icon { font-size: 2.5rem; margin: 0; line-height: 1; }
-.result-ok { background: #e3f4e8; border-color: #b7e0c3; color: var(--good); }
-.result-bad { background: #fbe5e6; border-color: #f2b8bb; color: var(--bad); }
-.result-ok p, .result-bad p { color: var(--fg); }
+.result-icon { font-size: 3rem; margin: 0; line-height: 1; }
+.result-ok { background: linear-gradient(180deg, #e4ffd9, var(--lime)); color: var(--good); }
+.result-ok::before { content: "✔ Payment"; background: linear-gradient(90deg, #087a26, #33c25a); }
+.result-bad { background: linear-gradient(180deg, #ffe0ea, #ff9ab5); color: var(--bad); }
+.result-bad::before { content: "⚠ Payment"; background: linear-gradient(90deg, #a00020, var(--hot)); }
+.result-ok p, .result-bad p { color: var(--ink); font-weight: 700; }
 
-/* QR codes */
-img.qr { display: block; width: 180px; height: 180px; margin: .5rem auto; image-rendering: pixelated; }
-details summary { cursor: pointer; color: var(--brand); margin-top: .3rem; }
+/* ---------- QR codes ---------- */
+img.qr { display: block; width: 180px; height: 180px; margin: .6rem auto; image-rendering: pixelated;
+         background: #fff; border: 3px solid var(--ink); box-shadow: 4px 4px 0 var(--hot); }
+details summary { cursor: pointer; color: var(--blue); font-weight: 700; margin-top: .3rem; }
 .print-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
-.print-card { border: 1px dashed #999; border-radius: 8px; padding: .75rem; text-align: center; background: #fff; break-inside: avoid; }
+.print-card { border: 2px dashed #999; padding: .75rem; text-align: center; background: #fff; break-inside: avoid; }
+.print-card img.qr { box-shadow: none; border: 0; }
+
 @media print {
   .topbar, .no-print, .flash { display: none !important; }
+  body::before { display: none; }
   body, .container { background: #fff; padding: 0; }
 }
 
 @media (min-width: 640px) {
   .register-form button[type=submit], .add-card button[type=submit] { width: auto; }
+}
+
+@media (max-width: 480px) {
+  h1 { font-size: 1.6rem; }
+  .balance { font-size: 2.6rem; }
+  .topbar .brand { font-size: 1.5rem; }
 }

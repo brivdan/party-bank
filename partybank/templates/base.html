@@ -8,25 +8,25 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="{{ url_for('index') }}">🏦 {{ settings.party_name }}</a>
+    <a class="brand" href="{{ url_for('index') }}"><span class="ico" aria-hidden="true">😎</span> {{ settings.party_name }}<span class="ico" aria-hidden="true">✨</span></a>
     {% if current_account %}
       <nav>
         {% if current_account.role == 'admin' %}
-          <a href="{{ url_for('admin.dashboard') }}">Dashboard</a>
-          <a href="{{ url_for('admin.money') }}">Bank desk</a>
-          <a href="{{ url_for('admin.cards') }}">Cards</a>
-          <a href="{{ url_for('admin.transactions') }}">Transactions</a>
-          <a href="{{ url_for('admin.settings_page') }}">Settings</a>
-          <a href="{{ url_for('admin.audit_log') }}">Audit</a>
+          <a href="{{ url_for('admin.dashboard') }}"><span class="ico" aria-hidden="true">📊</span> Dashboard</a>
+          <a href="{{ url_for('admin.money') }}"><span class="ico" aria-hidden="true">🏦</span> Bank desk</a>
+          <a href="{{ url_for('admin.cards') }}"><span class="ico" aria-hidden="true">💳</span> Cards</a>
+          <a href="{{ url_for('admin.transactions') }}"><span class="ico" aria-hidden="true">📜</span> Transactions</a>
+          <a href="{{ url_for('admin.settings_page') }}"><span class="ico" aria-hidden="true">⚙️</span> Settings</a>
+          <a href="{{ url_for('admin.audit_log') }}"><span class="ico" aria-hidden="true">🕵️</span> Audit</a>
         {% else %}{# users and merchants share one participant navigation #}
-          <a href="{{ url_for('user.dashboard') }}">Dashboard</a>
-          <a href="{{ url_for('merchant.terminal') }}">Terminal</a>
-          <a href="{{ url_for('merchant.products') }}">Products</a>
-          <a href="{{ url_for('user.history') }}">Transactions</a>
+          <a href="{{ url_for('user.dashboard') }}"><span class="ico" aria-hidden="true">🏠</span> Dashboard</a>
+          <a href="{{ url_for('merchant.terminal') }}"><span class="ico" aria-hidden="true">🛒</span> Terminal</a>
+          <a href="{{ url_for('merchant.products') }}"><span class="ico" aria-hidden="true">📦</span> Products</a>
+          <a href="{{ url_for('user.history') }}"><span class="ico" aria-hidden="true">📜</span> Transactions</a>
         {% endif %}
         <form method="post" action="{{ url_for('auth.logout') }}" class="inline">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button class="link">Log out</button>
+          <button class="link"><span class="ico" aria-hidden="true">🚪</span> Log out</button>
         </form>
       </nav>
     {% endif %}

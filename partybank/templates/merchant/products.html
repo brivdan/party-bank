@@ -2,7 +2,7 @@
 {% block title %}Products · {{ settings.party_name }}{% endblock %}
 {% block content %}
 <section class="card">
-  <h1>Add product</h1>
+  <h1><span class="ico" aria-hidden="true">➕</span> Add product</h1>
   <form method="post" class="inline-grid" autocomplete="off">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Name
@@ -16,7 +16,7 @@
 </section>
 
 <section class="card">
-  <h2>Products</h2>
+  <h2><span class="ico" aria-hidden="true">📦</span> Products</h2>
   {% if products %}
   <div class="table-wrap">
   <table>

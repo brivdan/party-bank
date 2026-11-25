@@ -2,7 +2,7 @@
 {% block title %}Transactions · {{ settings.party_name }}{% endblock %}
 {% block content %}
 <section class="card">
-  <h1>Transactions</h1>
+  <h1><span class="ico" aria-hidden="true">📜</span> Transactions</h1>
   {% include "admin/_ledger_check.html" %}
   <input type="search" class="filter" data-filter="#tx-table" placeholder="Filter by name, type, ref…">
   <div class="table-wrap">

@@ -22,7 +22,7 @@
   <input type="hidden" name="key" value="{{ keys[action] }}">
 {% endmacro %}
 {% block content %}
-<h1>Bank desk</h1>
+<h1><span class="ico" aria-hidden="true">🏦</span> Bank desk</h1>
 <p class="muted small">Physical cash held: <strong>{{ stats.cash_cents|money }}</strong> ·
   Reserve: <strong>{{ stats.reserve_cents|money }}</strong> ·
   Every action below is a ledger transaction and an audit log entry. Balances are never edited directly.</p>
