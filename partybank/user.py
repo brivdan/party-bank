@@ -187,7 +187,7 @@ def _execute_transfer(conn, to_id, amount, note, key, recipient_name):
                   f"to #{to_id} {format_money(amount)}: {e}", g.account["id"], request.remote_addr)
         flash(str(e), "error")
         session.pop("pending_transfer", None)
-        return _send_form({"to": str(to_id), "amount": f"{amount / 100:.2f}", "note": note}, 400)
+        return _send_form({"to": str(to_id), "amount": str(amount // 100), "note": note}, 400)
 
     session.pop("pending_transfer", None)
     if result.duplicate:

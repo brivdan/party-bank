@@ -2,7 +2,7 @@
 dashboard figures, traceability and the ban on direct balance overwrites.
 
 Demo data: opening balances are cash deposits (Alice 100, Bob 75, Carol 50),
-so the vault holds A$225.00. Alice then bought a 4.50 latte -> Alice 95.50.
+so the vault holds A$225. Alice then bought a A$5 latte -> Alice 95.
 """
 
 import sqlite3
@@ -86,7 +86,7 @@ class Stage4Test(BankTestCase):
         self.assertTrue(self.audit_rows("money.withdrawal"))
 
     def test_withdrawal_limits(self):
-        self.desk("withdrawal", self.bob, "75.01")  # more than Bob has
+        self.desk("withdrawal", self.bob, "76")  # more than Bob has
         self.assertEqual(self.balance("Bob Smith"), 75_00)
         # Bob gets a big credit, but the vault only holds 225.00 of physical cash.
         self.desk("credit", self.bob, "500", "Prize money")
@@ -108,18 +108,18 @@ class Stage4Test(BankTestCase):
 
     def test_admin_transfer_requires_reason(self):
         self.desk("transfer", self.alice, "5", "", to_account_id=self.bob["id"])
-        self.assertEqual(self.balance("Alice Johnson"), 95_50)
+        self.assertEqual(self.balance("Alice Johnson"), 95_00)
         self.desk("transfer", self.alice, "5", "Paid for Bob's ticket", to_account_id=self.bob["id"])
-        self.assertEqual((self.balance("Alice Johnson"), self.balance("Bob Smith")), (90_50, 80_00))
+        self.assertEqual((self.balance("Alice Johnson"), self.balance("Bob Smith")), (90_00, 80_00))
         self.assertEqual(self.last_tx()["description"], "Paid for Bob's ticket")
 
     def test_charge_needs_pin_and_counts_as_earnings(self):
         before = self.overview()
         self.desk("charge", self.alice, "2", "Card replacement", pin="0000")
-        self.assertEqual(self.balance("Alice Johnson"), 95_50)
+        self.assertEqual(self.balance("Alice Johnson"), 95_00)
         self.desk("charge", self.alice, "2", "Card replacement", pin="1111")
         after = self.overview()
-        self.assertEqual(self.balance("Alice Johnson"), 93_50)
+        self.assertEqual(self.balance("Alice Johnson"), 93_00)
         self.assertEqual(after["earnings_cents"], before["earnings_cents"] + 2_00)
         self.assertEqual(after["reserve_cents"], before["reserve_cents"] + 2_00)
         tx = self.last_tx()
@@ -128,10 +128,10 @@ class Stage4Test(BankTestCase):
     def test_credit_and_debit_need_reason_and_are_traceable(self):
         before = self.overview()
         self.desk("credit", self.alice, "10", "")           # rejected: no reason
-        self.assertEqual(self.balance("Alice Johnson"), 95_50)
+        self.assertEqual(self.balance("Alice Johnson"), 95_00)
         self.desk("credit", self.alice, "10", "Lost-and-found refund")
         self.desk("debit", self.alice, "4", "Duplicate credit")
-        self.assertEqual(self.balance("Alice Johnson"), 101_50)
+        self.assertEqual(self.balance("Alice Johnson"), 101_00)
         after = self.overview()
         self.assertEqual(after["reserve_cents"], before["reserve_cents"] - 6_00)
         self.assertEqual(after["earnings_cents"], before["earnings_cents"])  # corrections aren't profit
@@ -182,7 +182,7 @@ class Stage4Test(BankTestCase):
             ):
                 with self.assertRaises(sqlite3.DatabaseError, msg=sql):
                     conn.execute(sql, params)
-        self.assertEqual(self.balance("Alice Johnson"), 95_50)
+        self.assertEqual(self.balance("Alice Johnson"), 95_00)
 
     def test_dashboard_figures(self):
         self.set_fee_and_sell()
@@ -192,8 +192,8 @@ class Stage4Test(BankTestCase):
         self.assertEqual(stats["digital_cents"],
                          sum(self.balance(n) for n in ("Alice Johnson", "Bob Smith", "Carol White",
                                                        "Coffee Corner", "Snack Stand")))
-        self.assertEqual(stats["earnings_cents"], 23)                 # 2.5% fee on 9.00
-        self.assertEqual(stats["volume_cents"], 4_50 + 9_00)          # purchases + transfers
+        self.assertEqual(stats["earnings_cents"], 1_00)               # 2.5% of 10 = 0.25 -> minimum A$1
+        self.assertEqual(stats["volume_cents"], 5_00 + 10_00)          # purchases + transfers
         self.assertEqual(stats["cash_cents"], stats["digital_cents"] + stats["reserve_cents"])
         page = self.admin.get("/admin/").get_data(as_text=True)
         self.assertIn("Ranking by balance", page)

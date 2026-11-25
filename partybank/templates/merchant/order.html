@@ -19,6 +19,9 @@
 <section class="card">
   <h2>Order #{{ order.id }}</h2>
   {% include "merchant/_order_items.html" %}
+  {% if cashback_cents %}
+    <p class="muted small">🎁 Customer {{ 'got' if order.status == 'paid' else 'gets' }} {{ cashback_cents|money }} cashback from the bank</p>
+  {% endif %}
   {% if fee_cents %}
     <p class="muted small">Bank fee {{ fee_cents|money }} · you receive {{ (order.total_cents - fee_cents)|money }}</p>
   {% endif %}

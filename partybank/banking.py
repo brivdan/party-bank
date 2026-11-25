@@ -8,7 +8,7 @@ import re
 import secrets
 from contextlib import nullcontext
 from dataclasses import dataclass
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -29,24 +29,39 @@ class BankError(ValueError):
 
 # ---------- money ----------
 
+# Party money has no cents: every amount is a whole A$. Amounts are still
+# stored in the existing *_cents columns (always a multiple of 100), so no
+# database migration is needed.
+UNIT = 100  # cents per A$
+
+
+def round_whole(value):
+    """Round an amount in A$ (Decimal/int) to a whole A$, half up.
+    Any positive amount below 1 becomes 1. Returns cents."""
+    value = Decimal(value)
+    if value <= 0:
+        return 0
+    whole = int(value.quantize(Decimal(1), rounding=ROUND_HALF_UP))
+    return max(whole, 1) * UNIT
+
+
 def parse_amount(text, *, allow_zero=False):
-    """Parse '12.50' / '12' / '12,50' into integer cents."""
+    """Parse '12' / '12.4' / '12,6' into cents of a whole A$ (12.4 -> 12, 12.6 -> 13, 0.3 -> 1)."""
     raw = (text or "").strip().replace(",", ".")
     if raw == "":
         raw = "0"
     try:
         value = Decimal(raw)
     except InvalidOperation:
-        raise BankError("Enter a valid amount, e.g. 12.50.") from None
+        raise BankError("Enter a valid amount, e.g. 12.") from None
     if not value.is_finite():
-        raise BankError("Enter a valid amount, e.g. 12.50.")
-    if abs(value) * 100 > MAX_AMOUNT_CENTS:
+        raise BankError("Enter a valid amount, e.g. 12.")
+    if value < 0:
+        raise BankError("Amount must be greater than zero.")
+    if value * UNIT > MAX_AMOUNT_CENTS:
         raise BankError("Amount is too large.")
-    cents = value * 100
-    if cents != cents.to_integral_value():
-        raise BankError("Amounts can have at most 2 decimal places.")
-    cents = int(cents)
-    if cents < 0 or (cents == 0 and not allow_zero):
+    cents = round_whole(value)
+    if cents == 0 and not allow_zero:
         raise BankError("Amount must be greater than zero.")
     return cents
 
@@ -54,7 +69,10 @@ def parse_amount(text, *, allow_zero=False):
 def format_money(cents, symbol="A$"):
     cents = int(cents or 0)
     sign = "-" if cents < 0 else ""
-    return f"{sign}{symbol}{abs(cents) / 100:,.2f}"
+    if cents % UNIT == 0:
+        return f"{sign}{symbol}{abs(cents) // UNIT:,}"
+    # Only records made before the whole-A$ rule can still have cents.
+    return f"{sign}{symbol}{abs(cents) / UNIT:,.2f}"
 
 
 # ---------- card tokens ----------
@@ -230,6 +248,18 @@ def _authorize(conn, kind, actor, src, dst, amount_cents, idempotency_key):
                        (idempotency_key, actor["id"], amount_cents)).fetchone() is not None)
     elif kind == "fee":
         allowed = participant(actor) and actor["id"] == src["id"] and reserve(dst)
+    elif kind == "cashback":
+        # Reserve -> customer, only as part of a purchase the actor just
+        # collected, and only for the configured cashback on that purchase.
+        purchase = None
+        if idempotency_key and idempotency_key.endswith(CASHBACK_KEY_SUFFIX):
+            purchase = conn.execute(
+                "SELECT amount_cents FROM transactions WHERE kind = 'purchase' AND idempotency_key = ? "
+                "AND from_account_id = ? AND to_account_id = ?",
+                (idempotency_key[:-len(CASHBACK_KEY_SUFFIX)], dst["id"], actor["id"]),
+            ).fetchone()
+        allowed = (participant(actor) and reserve(src) and participant(dst) and purchase is not None
+                   and amount_cents == compute_fee(purchase["amount_cents"], cashback_bps(conn)))
     else:
         allowed = False  # refunds arrive with their feature
     if not allowed:
@@ -263,6 +293,8 @@ def post_transaction(conn, *, kind, from_id, to_id, amount_cents, actor, descrip
         raise BankError("Amount must be greater than zero.")
     if amount_cents > MAX_AMOUNT_CENTS:
         raise BankError("Amount is too large.")
+    if amount_cents % UNIT:
+        raise BankError("Amounts must be whole A$ (no cents).")
     if from_id == to_id:
         raise BankError("You cannot send money to the same account.")
     if idempotency_key is not None and not IDEMPOTENCY_KEY_RE.match(idempotency_key):
@@ -507,9 +539,19 @@ def fee_bps(conn):
     return int(row["value"]) if row else 0
 
 
+def cashback_bps(conn):
+    row = conn.execute("SELECT value FROM settings WHERE key = 'cashback_bps'").fetchone()
+    return int(row["value"]) if row else 0
+
+
+CASHBACK_KEY_SUFFIX = "-cashback"
+
+
 def compute_fee(total_cents, bps):
-    """Integer fee, rounded half up to the nearest cent."""
-    return (total_cents * bps + 5000) // 10000
+    """Fee in whole A$: rounded half up, and at least A$1 whenever fees are on."""
+    if bps <= 0 or total_cents <= 0:
+        return 0
+    return round_whole(Decimal(total_cents) * bps / 10000 / UNIT)
 
 
 # ---------- orders (point of sale) ----------
@@ -522,6 +564,7 @@ class PaymentResult:
     fee_cents: int
     customer_name: str
     duplicate: bool
+    cashback_cents: int = 0
 
 
 def create_order(conn, *, merchant, quantities, custom_cents=0, custom_label=""):
@@ -544,7 +587,8 @@ def create_order(conn, *, merchant, quantities, custom_cents=0, custom_label="")
             raise BankError("A selected product is no longer available. Reload the terminal.")
         for product_id, qty in wanted.items():
             p = products[product_id]
-            lines.append((p["id"], p["name"], p["price_cents"], qty))
+            # Whole A$ only (guards against any price saved before the rule).
+            lines.append((p["id"], p["name"], round_whole(Decimal(p["price_cents"]) / UNIT), qty))
     if custom_cents:
         label = (custom_label or "").strip()[:MAX_PRODUCT_NAME] or "Custom amount"
         lines.append((None, label, custom_cents, 1))
@@ -602,7 +646,7 @@ def _paid_result(order, customer, duplicate):
     if order["customer_id"] != customer["id"]:
         raise BankError("This order has already been paid.")
     return PaymentResult(order["id"], order["transaction_id"], order["total_cents"],
-                         order["fee_cents"], customer["name"], duplicate)
+                         order["fee_cents"], customer["name"], duplicate, order["cashback_cents"])
 
 
 def card_owner_check(conn, token, account_id):
@@ -625,7 +669,9 @@ def participant_stats(conn, account_id):
           (SELECT COALESCE(SUM(amount_cents), 0) FROM transactions WHERE status = 'completed'
             AND to_account_id = :a AND kind IN ('purchase', 'transfer')) AS earned_cents,
           (SELECT COALESCE(SUM(amount_cents), 0) FROM transactions WHERE status = 'completed'
-            AND from_account_id = :a AND kind IN ('purchase', 'transfer', 'fee', 'charge')) AS spent_cents
+            AND from_account_id = :a AND kind IN ('purchase', 'transfer', 'fee', 'charge')) AS spent_cents,
+          (SELECT COALESCE(SUM(amount_cents), 0) FROM transactions WHERE status = 'completed'
+            AND to_account_id = :a AND kind = 'cashback') AS cashback_cents
         """, {"a": account_id},
     ).fetchone()
     return dict(row)
@@ -679,12 +725,20 @@ def pay_order(conn, *, order_id, card_token, pin, actor, ip=None, require_pin=Tr
                 actor=actor, description=f"Fee for order #{order_id}",
                 idempotency_key=order["payment_key"] + "-fee",
             )
+        # Cashback: same rounding as fees (whole A$, at least 1 when enabled), paid by the reserve.
+        cashback = compute_fee(total, cashback_bps(conn))
+        if cashback:
+            post_transaction(
+                conn, kind="cashback", from_id=reserve_account_id(conn), to_id=customer["id"],
+                amount_cents=cashback, actor=actor, description=f"Cashback for order #{order_id}",
+                idempotency_key=order["payment_key"] + CASHBACK_KEY_SUFFIX,
+            )
         conn.execute(
             "UPDATE orders SET status = 'paid', customer_id = ?, transaction_id = ?, fee_cents = ?, "
-            "paid_at = datetime('now') WHERE id = ?",
-            (customer["id"], purchase.tx_id, fee, order_id),
+            "cashback_cents = ?, paid_at = datetime('now') WHERE id = ?",
+            (customer["id"], purchase.tx_id, fee, cashback, order_id),
         )
-    return PaymentResult(order_id, purchase.tx_id, total, fee, customer["name"], False)
+    return PaymentResult(order_id, purchase.tx_id, total, fee, customer["name"], False, cashback)
 
 
 def merchant_stats(conn, merchant_id):
@@ -801,6 +855,8 @@ def bank_overview(conn):
             JOIN accounts a ON a.id = t.to_account_id
             WHERE t.status = 'completed' AND t.kind IN ('fee', 'charge') AND a.system_key = 'reserve') AS earnings_cents,
           (SELECT COALESCE(SUM(amount_cents), 0) FROM transactions
+            WHERE status = 'completed' AND kind = 'cashback') AS cashback_cents,
+          (SELECT COALESCE(SUM(amount_cents), 0) FROM transactions
             WHERE status = 'completed' AND kind = 'deposit') AS deposits_cents,
           (SELECT COALESCE(SUM(amount_cents), 0) FROM transactions
             WHERE status = 'completed' AND kind = 'withdrawal') AS withdrawals_cents,
@@ -810,6 +866,8 @@ def bank_overview(conn):
     ).fetchone()
     stats = dict(row)
     stats["accounts"] = stats["users"] + stats["merchants"]
+    # Cashback is a cost to the bank: net earnings = fees + charges - cashback paid.
+    stats["net_earnings_cents"] = stats["earnings_cents"] - stats["cashback_cents"]
     return stats
 
 

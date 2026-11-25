@@ -16,7 +16,7 @@
       </select>
     </label>
     <label>Amount ({{ settings.currency_symbol }})
-      <input name="amount" value="{{ form.get('amount', '') }}" required inputmode="decimal" placeholder="0.00">
+      <input name="amount" value="{{ form.get('amount', '') }}" required inputmode="decimal" placeholder="0">
     </label>
     <label>Note (optional)
       <input name="note" value="{{ form.get('note', '') }}" maxlength="{{ max_note }}" placeholder="What is it for?">

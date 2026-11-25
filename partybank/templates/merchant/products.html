@@ -9,7 +9,7 @@
       <input name="name" value="{{ form.get('name', '') }}" required maxlength="60" placeholder="e.g. Latte">
     </label>
     <label>Price ({{ settings.currency_symbol }})
-      <input name="price" value="{{ form.get('price', '') }}" required inputmode="decimal" placeholder="0.00">
+      <input name="price" value="{{ form.get('price', '') }}" required inputmode="decimal" placeholder="0">
     </label>
     <button type="submit">Add</button>
   </form>

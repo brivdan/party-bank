@@ -11,6 +11,9 @@
 <div class="stats">
   <div class="stat"><span class="pos">{{ stats.earned_cents|money }}</span>Total earned (sales + transfers in)</div>
   <div class="stat"><span class="neg">{{ stats.spent_cents|money }}</span>Total spent (purchases, transfers out, fees)</div>
+  {% if stats.cashback_cents or (settings.cashback_bps or '0')|int %}
+  <div class="stat"><span class="pos">{{ stats.cashback_cents|money }}</span>Cashback received</div>
+  {% endif %}
 </div>
 
 <section class="card">

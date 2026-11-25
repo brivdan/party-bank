@@ -44,7 +44,7 @@ CREATE INDEX IF NOT EXISTS idx_products_merchant ON products(merchant_id);
 
 CREATE TABLE IF NOT EXISTS transactions (
     id              INTEGER PRIMARY KEY,
-    kind            TEXT    NOT NULL CHECK (kind IN ('issue', 'transfer', 'purchase', 'refund', 'adjustment', 'fee', 'deposit', 'withdrawal', 'charge')),
+    kind            TEXT    NOT NULL CHECK (kind IN ('issue', 'transfer', 'purchase', 'refund', 'adjustment', 'fee', 'deposit', 'withdrawal', 'charge', 'cashback')),
     status          TEXT    NOT NULL DEFAULT 'completed'
                             CHECK (status IN ('pending', 'completed', 'failed', 'cancelled')),
     amount_cents    INTEGER NOT NULL CHECK (amount_cents > 0),
@@ -135,6 +135,7 @@ CREATE TABLE IF NOT EXISTS orders (
     customer_id     INTEGER REFERENCES accounts(id),
     transaction_id  INTEGER REFERENCES transactions(id),
     fee_cents       INTEGER NOT NULL DEFAULT 0,
+    cashback_cents  INTEGER NOT NULL DEFAULT 0,             -- paid by the reserve to the customer
     created_at      TEXT    NOT NULL DEFAULT (datetime('now')),
     paid_at         TEXT
 );

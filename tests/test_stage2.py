@@ -40,30 +40,30 @@ class Stage2Test(BankTestCase):
     # --- completion criteria ---
 
     def test_two_users_transfer_and_balances_update(self):
-        r, fields = self.start_send(self.client, f"#{self.bob['id']:04d}", "10.25", "Pizza")
+        r, fields = self.start_send(self.client, f"#{self.bob['id']:04d}", "10.25", "Pizza")  # rounds to A$10
         self.assertEqual(r.status_code, 200)
         self.assertIn("Bob Smith", r.get_data(as_text=True))
-        self.assertEqual(self.balance("Alice Johnson"), 95_50)  # nothing moves before confirm
+        self.assertEqual(self.balance("Alice Johnson"), 95_00)  # nothing moves before confirm
 
         r = self.confirm(self.client, fields)
         self.assertEqual(r.status_code, 302)
-        self.assertEqual(self.balance("Alice Johnson"), 85_25)
-        self.assertEqual(self.balance("Bob Smith"), 85_25)
+        self.assertEqual(self.balance("Alice Johnson"), 85_00)
+        self.assertEqual(self.balance("Bob Smith"), 85_00)
 
         page = self.client.get("/me/").get_data(as_text=True)  # refreshed balance + flash
-        self.assertIn("Sent A$10.25 to Bob Smith", page)
-        self.assertIn("A$85.25", page)
+        self.assertIn("Sent A$10 to Bob Smith", page)
+        self.assertIn("A$85", page)
 
         # Recorded: id, timestamp, sender, recipient, amount, type; balanced ledger.
         tx = self.query("SELECT * FROM transactions ORDER BY id DESC LIMIT 1")[0]
         self.assertEqual((tx["kind"], tx["from_account_id"], tx["to_account_id"], tx["amount_cents"],
                           tx["created_by"], tx["description"]),
-                         ("transfer", self.alice["id"], self.bob["id"], 10_25, self.alice["id"], "Pizza"))
+                         ("transfer", self.alice["id"], self.bob["id"], 10_00, self.alice["id"], "Pizza"))
         self.assertTrue(tx["created_at"])
         entries = self.query("SELECT account_id, amount_cents FROM ledger_entries WHERE transaction_id = ?",
                              (tx["id"],))
         self.assertEqual(sorted((e["account_id"], e["amount_cents"]) for e in entries),
-                         sorted([(self.alice["id"], -10_25), (self.bob["id"], 10_25)]))
+                         sorted([(self.alice["id"], -10_00), (self.bob["id"], 10_00)]))
         with self.db() as conn:
             self.assertEqual(ledger_problems(conn), [])
 
@@ -73,29 +73,29 @@ class Stage2Test(BankTestCase):
 
         out_page = self.client.get("/me/history?dir=out").get_data(as_text=True)
         self.assertIn("Bob Smith", out_page)
-        self.assertIn("-A$5.00", out_page)
+        self.assertIn("-A$5", out_page)
 
         bob = self.app.test_client()
         self.card_login(bob, "DEMOUSER0002", "2222")
         in_page = bob.get("/me/history?dir=in").get_data(as_text=True)
         self.assertIn("Alice Johnson", in_page)
-        self.assertIn("+A$5.00", in_page)
+        self.assertIn("+A$5", in_page)
         self.assertIn("Thanks", in_page)
         self.assertNotIn("Alice Johnson", bob.get("/me/history?dir=out").get_data(as_text=True))
         self.assertEqual(bob.get("/me/balance.json").get_json()["balance_cents"], 80_00)
 
     def test_insufficient_funds_rejected(self):
         before = self.tx_count()
-        r, _ = self.start_send(self.client, str(self.bob["id"]), "95.51")
+        r, _ = self.start_send(self.client, str(self.bob["id"]), "95.51")  # rounds to 96 > 95
         self.assertEqual(r.status_code, 400)
         self.assertIn("Insufficient funds", r.get_data(as_text=True))
 
         # Engine rejects too (e.g. balance changed between form and confirm).
         with self.db() as conn, self.assertRaises(BankError):
             post_transaction(conn, kind="transfer", from_id=self.alice["id"], to_id=self.bob["id"],
-                             amount_cents=95_51, actor=self.alice)
+                             amount_cents=96_00, actor=self.alice)
         self.assertEqual(self.tx_count(), before)
-        self.assertEqual(self.balance("Alice Johnson"), 95_50)
+        self.assertEqual(self.balance("Alice Johnson"), 95_00)
 
     def test_insufficient_funds_at_confirm(self):
         _, fields = self.start_send(self.client, str(self.bob["id"]), "90")
@@ -105,16 +105,16 @@ class Stage2Test(BankTestCase):
         r = self.confirm(self.client, fields)
         self.assertEqual(r.status_code, 400)
         self.assertIn("Insufficient funds", r.get_data(as_text=True))
-        self.assertEqual(self.balance("Alice Johnson"), 85_50)
+        self.assertEqual(self.balance("Alice Johnson"), 85_00)
         self.assertTrue(self.query("SELECT 1 FROM audit_logs WHERE action = 'transfer.rejected'"))
 
     # --- validation ---
 
     def test_invalid_amounts_rejected(self):
-        for bad in ("-5", "0", "abc", "1.001", ""):
+        for bad in ("-5", "0", "abc", ""):
             r, _ = self.start_send(self.client, str(self.bob["id"]), bad)
             self.assertEqual(r.status_code, 400, bad)
-        for bad in (-100, 0, 1.5, True, "100", None):
+        for bad in (-100, 0, 1.5, True, "100", None, 150):  # 150 cents = A$1.50
             with self.db() as conn, self.assertRaises(BankError, msg=repr(bad)):
                 post_transaction(conn, kind="transfer", from_id=self.alice["id"], to_id=self.bob["id"],
                                  amount_cents=bad, actor=self.alice)
@@ -126,7 +126,7 @@ class Stage2Test(BankTestCase):
         r = self.confirm(self.client, fields)
         self.assertEqual(r.status_code, 400)
         self.assertEqual(self.tx_count(), before)
-        self.assertEqual(self.balance("Alice Johnson"), 95_50)
+        self.assertEqual(self.balance("Alice Johnson"), 95_00)
 
     def test_bad_recipients(self):
         for to, msg in ((str(self.alice["id"]), "your own account"), ("9999", "No active account"),
@@ -143,7 +143,7 @@ class Stage2Test(BankTestCase):
         r = self.confirm(self.client, fields)  # double click / back + resubmit
         self.assertEqual(r.status_code, 302)
         self.assertIn("already sent", self.client.get("/me/").get_data(as_text=True))
-        self.assertEqual(self.balance("Alice Johnson"), 88_50)
+        self.assertEqual(self.balance("Alice Johnson"), 88_00)
         self.assertEqual(self.balance("Bob Smith"), 82_00)
 
     def test_reused_key_with_different_amount_rejected(self):
@@ -154,7 +154,7 @@ class Stage2Test(BankTestCase):
             with self.assertRaises(BankError):
                 post_transaction(conn, kind="transfer", from_id=self.alice["id"], to_id=self.bob["id"],
                                  amount_cents=200, actor=self.alice, idempotency_key=key)
-        self.assertEqual(self.balance("Alice Johnson"), 94_50)
+        self.assertEqual(self.balance("Alice Johnson"), 94_00)
 
     def test_concurrent_double_spend(self):
         """Two simultaneous payments of the full balance: exactly one succeeds."""
@@ -164,7 +164,7 @@ class Stage2Test(BankTestCase):
             conn = connect(self.db_path)
             try:
                 post_transaction(conn, kind="transfer", from_id=self.alice["id"], to_id=self.bob["id"],
-                                 amount_cents=95_50, actor=self.alice)
+                                 amount_cents=95_00, actor=self.alice)
                 results.append("ok")
             except BankError:
                 results.append("rejected")
@@ -225,7 +225,7 @@ class Stage2Test(BankTestCase):
                                      amount_cents=100, actor=self.alice)
                     1 / 0
         self.assertEqual(self.tx_count(), before)
-        self.assertEqual(self.balance("Alice Johnson"), 95_50)
+        self.assertEqual(self.balance("Alice Johnson"), 95_00)
         self.assertEqual(self.balance("Bob Smith"), 75_00)
 
     def test_ledger_and_transactions_are_immutable(self):

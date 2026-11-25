@@ -1,7 +1,7 @@
 """Simplified mode: merged user/merchant roles and REQUIRE_PIN = False.
 
-Demo: Alice 95.50 (DEMOUSER0001), Bob 75.00 (DEMOUSER0002), Carol 50.00,
-Coffee Corner 4.50 (DEMOSHOP0001) selling Espresso 3.00 / Latte 4.50 / Croissant 3.50.
+Demo (whole A$): Alice 95 (DEMOUSER0001), Bob 75 (DEMOUSER0002), Carol 50,
+Coffee Corner 5 (DEMOSHOP0001) selling Espresso 3 / Latte 5 / Croissant 4.
 """
 
 import re
@@ -51,7 +51,7 @@ class SimplifiedTest(BankTestCase):
         self.assertEqual(r.request.path, "/me/")
         page = r.get_data(as_text=True)
         self.assertIn("Alice Johnson", page)
-        self.assertIn("A$95.50", page)
+        self.assertIn("A$95", page)
 
     def test_manual_card_login_without_pin(self):
         c = self.app.test_client()
@@ -87,15 +87,15 @@ class SimplifiedTest(BankTestCase):
 
     def test_transfer_confirmed_by_scanning_own_card(self):
         alice = self.logged_in("DEMOUSER0001")
-        page = self.prepare_transfer(alice, "Bob Smith", "12.50", "Drinks").get_data(as_text=True)
+        page = self.prepare_transfer(alice, "Bob Smith", "12.4", "Drinks").get_data(as_text=True)  # rounds to A$12
         self.assertIn("Tap your own card", page)
         self.assertNotIn('name="pin"', page)
-        self.assertEqual(self.balance("Alice Johnson"), 95_50)  # nothing moves before the scan
+        self.assertEqual(self.balance("Alice Johnson"), 95_00)  # nothing moves before the scan
 
         r = self.tap(alice, "DEMOUSER0001")
         self.assertEqual(r.request.path, "/me/")
-        self.assertIn("Sent A$12.50 to Bob Smith", r.get_data(as_text=True))
-        self.assertEqual((self.balance("Alice Johnson"), self.balance("Bob Smith")), (83_00, 87_50))
+        self.assertIn("Sent A$12 to Bob Smith", r.get_data(as_text=True))
+        self.assertEqual((self.balance("Alice Johnson"), self.balance("Bob Smith")), (83_00, 87_00))
 
         # Tapping again does not send a second time.
         r = self.tap(alice, "DEMOUSER0001")
@@ -107,9 +107,9 @@ class SimplifiedTest(BankTestCase):
         self.prepare_transfer(alice, "Bob Smith", "5")
         r = self.tap(alice, "DEMOUSER0002")  # Bob's card on Alice's phone
         self.assertIn("does not belong to this account", r.get_data(as_text=True))
-        self.assertEqual(self.balance("Alice Johnson"), 95_50)
+        self.assertEqual(self.balance("Alice Johnson"), 95_00)
         self.tap(alice, "DEMOUSER0001")  # still pending; own card confirms
-        self.assertEqual(self.balance("Alice Johnson"), 90_50)
+        self.assertEqual(self.balance("Alice Johnson"), 90_00)
 
     def test_transfer_confirmed_by_typed_card_id(self):
         alice = self.logged_in("DEMOUSER0001")
@@ -119,7 +119,7 @@ class SimplifiedTest(BankTestCase):
         self.assertEqual(r.status_code, 401)
         alice.post("/me/send/confirm", data={**fields, "card": "DEMO-USER-0001"})
         alice.post("/me/send/confirm", data={**fields, "card": "DEMO-USER-0001"})  # double submit
-        self.assertEqual(self.balance("Alice Johnson"), 94_50)
+        self.assertEqual(self.balance("Alice Johnson"), 94_00)
         self.assertEqual(self.balance("Bob Smith"), 76_00)
 
     def test_transfer_insufficient_funds(self):
@@ -139,13 +139,13 @@ class SimplifiedTest(BankTestCase):
         self.assertEqual(r.request.path, f"/merchant/orders/{order_id}")
         self.assertIn("Payment approved", page)
         self.assertIn("Alice Johnson", page)
-        self.assertEqual(self.balance("Alice Johnson"), 86_50)
-        self.assertEqual(self.balance("Coffee Corner"), 13_50)
+        self.assertEqual(self.balance("Alice Johnson"), 85_00)
+        self.assertEqual(self.balance("Coffee Corner"), 15_00)
         self.assertIn("Coffee Corner", seller.get("/me/").get_data(as_text=True))  # seller session kept
 
         # Second tap: the order is already paid, nothing is charged again.
         self.tap(seller, "DEMOUSER0001")
-        self.assertEqual(self.balance("Alice Johnson"), 86_50)
+        self.assertEqual(self.balance("Alice Johnson"), 85_00)
         self.assertEqual(self.tx_count("purchase"), 2)  # demo latte + this one
 
         # Both histories show it.
@@ -155,7 +155,7 @@ class SimplifiedTest(BankTestCase):
 
     def test_payment_failures(self):
         seller = self.logged_in("DEMOSHOP0001")
-        order_id = self.open_order(seller, "Latte", 30)  # 135.00 > Alice's 95.50
+        order_id = self.open_order(seller, "Latte", 30)  # 150 > Alice's 95
         r = self.tap(seller, "DEMOUSER0001")
         self.assertIn("Insufficient funds", r.get_data(as_text=True))
         r = self.tap(seller, "DEMOSHOP0001")  # seller's own card
@@ -165,7 +165,7 @@ class SimplifiedTest(BankTestCase):
         r = self.tap(seller, "DEMOUSER0002")
         self.assertIn("blocked", r.get_data(as_text=True))
         self.assertEqual(self.query("SELECT status FROM orders WHERE id = ?", (order_id,))[0]["status"], "open")
-        self.assertEqual(self.balance("Alice Johnson"), 95_50)
+        self.assertEqual(self.balance("Alice Johnson"), 95_00)
 
     def test_manual_card_entry_payment(self):
         seller = self.logged_in("DEMOSHOP0001")
@@ -186,7 +186,7 @@ class SimplifiedTest(BankTestCase):
                    data={"csrf_token": token, "name": "Lemonade", "price": "2.50", "active": "1"})
         order_id = self.open_order(alice, "Lemonade", 2)
         self.tap(alice, "DEMOUSER0002")  # Bob pays on Alice's phone
-        self.assertEqual((self.balance("Alice Johnson"), self.balance("Bob Smith")), (100_50, 70_00))
+        self.assertEqual((self.balance("Alice Johnson"), self.balance("Bob Smith")), (101_00, 69_00))
         self.assertEqual(self.query("SELECT status FROM orders WHERE id = ?", (order_id,))[0]["status"], "paid")
 
     # --- admin ---
@@ -217,7 +217,7 @@ class SimplifiedTest(BankTestCase):
                                                 "card_token": "DAVECARD01"})
         self.assertEqual(r.status_code, 302)
         dave = self.logged_in("DAVECARD01")
-        self.assertIn("A$10.00", dave.get("/me/").get_data(as_text=True))
+        self.assertIn("A$10", dave.get("/me/").get_data(as_text=True))
         with self.db() as conn:
             self.assertEqual(ledger_problems(conn), [])
 

@@ -1,7 +1,8 @@
 {# Ledger history table. Expects `history` rows from banking.account_history. #}
 {% set kind_labels = {'issue': 'Top-up', 'transfer': 'Transfer', 'purchase': 'Purchase',
                       'refund': 'Refund', 'adjustment': 'Adjustment', 'fee': 'Fee',
-                      'deposit': 'Cash deposit', 'withdrawal': 'Cash withdrawal', 'charge': 'Charge'} %}
+                      'deposit': 'Cash deposit', 'withdrawal': 'Cash withdrawal', 'charge': 'Charge',
+                      'cashback': 'Cashback'} %}
 {% if history %}
 <div class="table-wrap">
 <table class="history">

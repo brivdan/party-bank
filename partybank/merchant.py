@@ -5,7 +5,7 @@ from flask import (Blueprint, abort, current_app, flash, g, jsonify, redirect, r
 
 from .auth import role_required
 from .banking import (BankError, PinError, account_history, audit, balance_snapshot,
-                      compute_fee, create_order, customer_for_card, fee_bps, format_money,
+                      cashback_bps, compute_fee, create_order, customer_for_card, fee_bps, format_money,
                       merchant_stats, normalize_token, order_items, parse_amount, pay_order,
                       validate_product)
 from .db import get_db, transaction
@@ -186,7 +186,10 @@ def _get_order(conn, order_id):
 
 def _order_context(conn, order):
     fee = order["fee_cents"] if order["status"] == "paid" else compute_fee(order["total_cents"], fee_bps(conn))
-    return {"order": order, "items": order_items(conn, order["id"]), "fee_cents": fee}
+    cashback = (order["cashback_cents"] if order["status"] == "paid"
+                else compute_fee(order["total_cents"], cashback_bps(conn)))
+    return {"order": order, "items": order_items(conn, order["id"]), "fee_cents": fee,
+            "cashback_cents": cashback}
 
 
 @bp.route("/orders/<int:order_id>")

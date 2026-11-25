@@ -44,7 +44,7 @@
     var currency = terminal.dataset.currency || "";
     var totalEl = document.getElementById("order-total");
     var fmt = function (cents) {
-      return currency + (cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return currency + Math.round(cents / 100).toLocaleString("en-US");
     };
     var recalc = function () {
       var total = 0;
@@ -54,7 +54,7 @@
         total += qty * parseInt(item.dataset.price, 10);
       });
       var custom = parseFloat((terminal.querySelector(".custom-amount").value || "0").replace(",", "."));
-      if (custom > 0) total += Math.round(custom * 100);
+      if (custom > 0) total += Math.max(1, Math.round(custom)) * 100;  // whole A$, minimum 1
       totalEl.textContent = fmt(total);
     };
     terminal.addEventListener("click", function (e) {

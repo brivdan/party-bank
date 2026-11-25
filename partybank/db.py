@@ -67,6 +67,7 @@ def default_settings():
         "party_name": "Party Bank",
         "currency_symbol": "A$",
         "merchant_fee_bps": "0",  # merchant fee in basis points (250 = 2.5%); 0 = fees disabled
+        "cashback_bps": "0",      # customer cashback in basis points; 0 = cashback disabled
     }
 
 
@@ -79,6 +80,12 @@ def init_db(path):
         _ensure_tx_kinds(conn)
         conn.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
         with transaction(conn):
+            # Whole A$ only: round product prices saved with cents (half up, minimum A$1).
+            # Past orders and transactions are untouched.
+            conn.execute(
+                "UPDATE products SET price_cents = MAX(100, ((price_cents + 50) / 100) * 100) "
+                "WHERE price_cents % 100 <> 0"
+            )
             for key, value in default_settings().items():
                 conn.execute(
                     "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", (key, value)
@@ -103,6 +110,7 @@ def init_db(path):
 _ADDED_COLUMNS = [
     ("transactions", "idempotency_key", "TEXT"),  # Stage 2
     ("accounts", "system_key", "TEXT"),           # Stage 4
+    ("orders", "cashback_cents", "INTEGER NOT NULL DEFAULT 0"),  # cashback
 ]
 
 
@@ -115,7 +123,7 @@ def _add_missing_columns(conn):
 
 # Allowed transactions.kind values. Must match the CHECK in schema.sql.
 TX_KINDS = ("issue", "transfer", "purchase", "refund", "adjustment", "fee",
-            "deposit", "withdrawal", "charge")
+            "deposit", "withdrawal", "charge", "cashback")
 _KIND_CHECK_RE = re.compile(r"CHECK \(kind IN \(([^)]*)\)\)")
 
 

@@ -19,8 +19,8 @@ DEMO_ACCOUNTS = [
 ]
 
 DEMO_PRODUCTS = {
-    "Coffee Corner": [("Espresso", 3_00), ("Latte", 4_50), ("Croissant", 3_50)],
-    "Snack Stand": [("Chips", 2_00), ("Soda", 2_50), ("Chocolate Bar", 1_50)],
+    "Coffee Corner": [("Espresso", 3_00), ("Latte", 5_00), ("Croissant", 4_00)],
+    "Snack Stand": [("Chips", 2_00), ("Soda", 3_00), ("Chocolate Bar", 2_00)],
 }
 
 
@@ -68,7 +68,7 @@ def seed_demo(db_path):
 
             post_transaction(
                 conn, kind="purchase", from_id=ids["Alice Johnson"], to_id=ids["Coffee Corner"],
-                amount_cents=4_50, description="Latte", product_id=product_ids["Latte"],
+                amount_cents=5_00, description="Latte", product_id=product_ids["Latte"],
                 actor=SYSTEM_ACTOR,
             )
 

@@ -1,8 +1,8 @@
 """Stage 3 checks: products, terminal orders, customer authorization, fees,
 merchant statistics and both-sided history.
 
-Demo: Alice 95.50 (card DEMOUSER0001, PIN 1111), Coffee Corner 4.50
-(card DEMOSHOP0001, PIN 9001) with Espresso 3.00, Latte 4.50, Croissant 3.50.
+Demo (whole A$): Alice 95 (card DEMOUSER0001, PIN 1111), Coffee Corner 5
+(card DEMOSHOP0001, PIN 9001) with Espresso 3, Latte 5, Croissant 4.
 """
 
 import re
@@ -50,14 +50,14 @@ class Stage3Test(BankTestCase):
 
     def test_product_crud(self):
         token = csrf(self.m, "/merchant/products")
-        self.m.post("/merchant/products", data={"csrf_token": token, "name": "Muffin", "price": "2.80"})
+        self.m.post("/merchant/products", data={"csrf_token": token, "name": "Muffin", "price": "2.80"})  # rounds to 3
         p = self.query("SELECT * FROM products WHERE name = 'Muffin'")[0]
-        self.assertEqual((p["merchant_id"], p["price_cents"], p["active"]), (self.shop["id"], 280, 1))
+        self.assertEqual((p["merchant_id"], p["price_cents"], p["active"]), (self.shop["id"], 300, 1))
 
         self.m.post(f"/merchant/products/{p['id']}/edit",
-                    data={"csrf_token": token, "name": "Blueberry Muffin", "price": "3.10", "active": "1"})
+                    data={"csrf_token": token, "name": "Blueberry Muffin", "price": "3.60", "active": "1"})
         p = self.query("SELECT * FROM products WHERE id = ?", (p["id"],))[0]
-        self.assertEqual((p["name"], p["price_cents"]), ("Blueberry Muffin", 310))
+        self.assertEqual((p["name"], p["price_cents"]), ("Blueberry Muffin", 400))
 
         self.m.post(f"/merchant/products/{p['id']}/toggle", data={"csrf_token": token})
         self.assertEqual(self.query("SELECT active FROM products WHERE id = ?", (p["id"],))[0]["active"], 0)
@@ -90,14 +90,14 @@ class Stage3Test(BankTestCase):
     # --- completion criteria: order -> authorize -> pay ---
 
     def test_order_payment_end_to_end(self):
-        order_id, _ = self.create_order({"Latte": 2, "Croissant": 1}, custom="1.25", label="Tip")
+        order_id, _ = self.create_order({"Latte": 2, "Croissant": 1}, custom="1.25", label="Tip")  # tip rounds to A$1
         order = self.query("SELECT * FROM orders WHERE id = ?", (order_id,))[0]
-        self.assertEqual((order["status"], order["total_cents"]), ("open", 2 * 450 + 350 + 125))  # 13.75
+        self.assertEqual((order["status"], order["total_cents"]), ("open", 2 * 500 + 400 + 100))  # 15
 
         page = self.m.get(f"/merchant/orders/{order_id}/pay?card=demouser0001").get_data(as_text=True)
         self.assertIn("enter your PIN", page)
         self.assertNotIn("Alice", page)  # identification reveals nothing
-        self.assertNotIn("95.50", page)
+        self.assertNotIn("A$95", page)
 
         r = self.pay(order_id)
         self.assertEqual(r.status_code, 302)
@@ -105,12 +105,12 @@ class Stage3Test(BankTestCase):
         self.assertIn("Payment approved", receipt)
         self.assertIn("Alice Johnson", receipt)
 
-        self.assertEqual(self.balance("Alice Johnson"), 95_50 - 13_75)
-        self.assertEqual(self.balance("Coffee Corner"), 4_50 + 13_75)
+        self.assertEqual(self.balance("Alice Johnson"), 95_00 - 15_00)
+        self.assertEqual(self.balance("Coffee Corner"), 5_00 + 15_00)
         order = self.query("SELECT * FROM orders WHERE id = ?", (order_id,))[0]
         tx = self.query("SELECT * FROM transactions WHERE id = ?", (order["transaction_id"],))[0]
         self.assertEqual((order["status"], tx["kind"], tx["from_account_id"], tx["to_account_id"], tx["amount_cents"]),
-                         ("paid", "purchase", self.alice["id"], self.shop["id"], 13_75))
+                         ("paid", "purchase", self.alice["id"], self.shop["id"], 15_00))
         self.assertEqual(tx["description"], "2× Latte, Croissant, Tip")
 
         # In both histories.
@@ -119,7 +119,7 @@ class Stage3Test(BankTestCase):
         self.card_login(alice, "DEMOUSER0001", "1111")
         alice_page = alice.get("/me/history?dir=out").get_data(as_text=True)
         self.assertIn("Coffee Corner", alice_page)
-        self.assertIn("-A$13.75", alice_page)
+        self.assertIn("-A$15", alice_page)
         with self.db() as conn:
             self.assertEqual(ledger_problems(conn), [])
 
@@ -134,7 +134,7 @@ class Stage3Test(BankTestCase):
     def test_custom_amount_only(self):
         order_id, _ = self.create_order(custom="7.20", label="Raffle ticket")
         self.pay(order_id)
-        self.assertEqual(self.balance("Alice Johnson"), 95_50 - 7_20)
+        self.assertEqual(self.balance("Alice Johnson"), 95_00 - 7_00)
 
     def test_invalid_orders_rejected(self):
         for quantities, custom in (({}, ""), ({"Latte": -1}, ""), ({"Latte": 100}, ""), ({}, "-3"), ({}, "abc")):
@@ -150,7 +150,7 @@ class Stage3Test(BankTestCase):
         self.assertEqual(r.status_code, 401)
         self.assertIn("Payment declined", r.get_data(as_text=True))
         self.assertIn("Wrong PIN", r.get_data(as_text=True))
-        self.assertEqual(self.balance("Alice Johnson"), 95_50)
+        self.assertEqual(self.balance("Alice Johnson"), 95_00)
         self.assertEqual(self.query("SELECT status FROM orders WHERE id = ?", (order_id,))[0]["status"], "open")
 
     def test_pin_lockout_applies_at_terminal(self):
@@ -166,8 +166,8 @@ class Stage3Test(BankTestCase):
         r = self.pay(order_id)
         self.assertEqual(r.status_code, 400)
         self.assertIn("Insufficient funds", r.get_data(as_text=True))
-        self.assertEqual(self.balance("Alice Johnson"), 95_50)
-        self.assertEqual(self.balance("Coffee Corner"), 4_50)
+        self.assertEqual(self.balance("Alice Johnson"), 95_00)
+        self.assertEqual(self.balance("Coffee Corner"), 5_00)
         self.assertTrue(self.query("SELECT 1 FROM audit_logs WHERE action = 'payment.declined'"))
 
     def test_unknown_blocked_and_merchant_cards_rejected(self):
@@ -183,7 +183,7 @@ class Stage3Test(BankTestCase):
         order_id, _ = self.create_order({"Latte": 1})
         self.pay(order_id)
         self.pay(order_id)  # double tap on "Approve"
-        self.assertEqual(self.balance("Alice Johnson"), 91_00)
+        self.assertEqual(self.balance("Alice Johnson"), 90_00)
         self.assertEqual(self.query("SELECT COUNT(*) AS n FROM transactions WHERE kind = 'purchase'")[0]["n"], 2)
 
         bob = self.pay(order_id, card="DEMOUSER0002", pin="2222")  # someone else tries to pay it again
@@ -194,7 +194,7 @@ class Stage3Test(BankTestCase):
         order_id, _ = self.create_order({"Latte": 1})
         self.m.post(f"/merchant/orders/{order_id}/cancel", data={"csrf_token": csrf(self.m, "/merchant/terminal")})
         self.pay(order_id)
-        self.assertEqual(self.balance("Alice Johnson"), 95_50)
+        self.assertEqual(self.balance("Alice Johnson"), 95_00)
         self.assertEqual(self.query("SELECT status FROM orders WHERE id = ?", (order_id,))[0]["status"], "cancelled")
 
     def test_other_merchant_cannot_see_or_pay_order(self):
@@ -241,23 +241,23 @@ class Stage3Test(BankTestCase):
 
     def test_fee_and_dashboard_stats(self):
         self.set_fee("2.5")
-        order_id, _ = self.create_order({"Latte": 2})  # 9.00 -> fee 0.23 (0.225 rounded half up)
+        order_id, _ = self.create_order({"Latte": 2})  # 10 -> 2.5% = 0.25 -> below 1, so the fee is A$1
         self.pay(order_id)
-        self.assertEqual(self.balance("Alice Johnson"), 95_50 - 9_00)
-        self.assertEqual(self.balance("Coffee Corner"), 4_50 + 9_00 - 23)
+        self.assertEqual(self.balance("Alice Johnson"), 95_00 - 10_00)
+        self.assertEqual(self.balance("Coffee Corner"), 5_00 + 10_00 - 1_00)
         fee_tx = self.query("SELECT * FROM transactions WHERE kind = 'fee'")[0]
-        self.assertEqual((fee_tx["from_account_id"], fee_tx["amount_cents"]), (self.shop["id"], 23))
+        self.assertEqual((fee_tx["from_account_id"], fee_tx["amount_cents"]), (self.shop["id"], 1_00))
 
         page = self.m.get("/me/").get_data(as_text=True)  # merged participant dashboard
-        self.assertRegex(page, r'<span class="pos">A\$13.50</span>Total earned')  # sales: 4.50 demo + 9.00
-        self.assertRegex(page, r'<span class="neg">A\$0.23</span>Total spent')    # the fee
-        self.assertEqual(merchant_stats_net(self), 13_27)                         # net revenue still computed
+        self.assertRegex(page, r'<span class="pos">A\$15</span>Total earned')  # sales: 5 demo + 10
+        self.assertRegex(page, r'<span class="neg">A\$1</span>Total spent')    # the fee
+        self.assertEqual(merchant_stats_net(self), 14_00)                         # net revenue still computed
         with self.db() as conn:
             self.assertEqual(ledger_problems(conn), [])
 
     def test_fees_hidden_when_disabled(self):
         page = self.m.get("/me/").get_data(as_text=True)
-        self.assertRegex(page, r'<span class="neg">A\$0.00</span>Total spent')
+        self.assertRegex(page, r'<span class="neg">A\$0</span>Total spent')
 
     def test_fee_helpers(self):
         self.assertEqual(parse_fee_percent("2.5"), 250)
@@ -265,7 +265,9 @@ class Stage3Test(BankTestCase):
         for bad in ("-1", "21", "1.234", "abc"):
             with self.assertRaises(BankError):
                 parse_fee_percent(bad)
-        self.assertEqual(compute_fee(900, 250), 23)
+        self.assertEqual(compute_fee(900, 250), 100)     # 0.225 -> minimum A$1
+        self.assertEqual(compute_fee(10000, 250), 300)   # 2.5 -> 3
+        self.assertEqual(compute_fee(10000, 240), 200)   # 2.4 -> 2
         self.assertEqual(compute_fee(100, 0), 0)
 
 

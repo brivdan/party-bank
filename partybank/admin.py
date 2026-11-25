@@ -335,6 +335,10 @@ def settings_page():
         party_name = request.form.get("party_name", "").strip()
         try:
             bps = parse_fee_percent(request.form.get("fee_percent"))
+            try:
+                cb_bps = parse_fee_percent(request.form.get("cashback_percent"))
+            except BankError:
+                raise BankError("Cashback must be between 0 and 20%, with at most 2 decimals.") from None
             if not base_url.startswith(("http://", "https://")) or len(base_url) > 200:
                 raise BankError("Base URL must start with http:// or https://")
             if not party_name or len(party_name) > 60:
@@ -343,8 +347,9 @@ def settings_page():
                 set_setting(conn, "base_url", base_url)
                 set_setting(conn, "party_name", party_name)
                 set_setting(conn, "merchant_fee_bps", str(bps))
+                set_setting(conn, "cashback_bps", str(cb_bps))
                 _audit(conn, "settings.update",
-                       f"base_url={base_url}, party_name={party_name}, merchant_fee={bps / 100:g}%")
+                       f"base_url={base_url}, party_name={party_name}, merchant_fee={bps / 100:g}%, cashback={cb_bps / 100:g}%")
             flash("Settings saved.", "success")
             return redirect(url_for("admin.settings_page"))
         except BankError as e:

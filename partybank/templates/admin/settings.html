@@ -19,6 +19,12 @@
     </label>
     <p class="muted small">Charged to the merchant on each sale and paid to the Party Bank Reserve.
       0 turns fees off. Customers always pay the listed price.</p>
+    <label>Customer cashback (%)
+      <input name="cashback_percent" value="{{ '%g'|format((current.cashback_bps or 0)|int / 100) }}" inputmode="decimal" placeholder="0">
+    </label>
+    <p class="muted small">Paid back to the customer on each purchase, from the Party Bank Reserve.
+      0 turns cashback off. Rounded like fees: whole A$, at least A$1 when cashback is on.
+      Transfers don't earn cashback.</p>
     <p class="muted small">Currency: {{ current.currency_symbol }}</p>
     <button type="submit">Save</button>
   </form>

@@ -13,6 +13,7 @@
   <p class="muted center">Pay {{ current_account.name }}</p>
   <p class="big center">{{ order.total_cents|money }}</p>
   {% include "merchant/_order_items.html" %}
+  {% if cashback_cents %}<p class="small"><strong>🎁 You get {{ cashback_cents|money }} cashback!</strong></p>{% endif %}
   <p class="muted small">Card <code>{{ token|card }}</code></p>
 
   <form method="post" action="{{ url_for('merchant.order_pay', order_id=order.id) }}" autocomplete="off" class="once">

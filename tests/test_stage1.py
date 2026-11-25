@@ -19,14 +19,14 @@ class Stage1Test(BankTestCase):
         self.assertTrue(r.location.endswith("/me/"))
         page = self.client.get("/me/").get_data(as_text=True)
         self.assertIn("Alice Johnson", page)
-        self.assertIn("A$95.50", page)  # 100 opening - 4.50 latte
+        self.assertIn("A$95", page)  # 100 opening - 5 latte
 
     def test_merchant_login(self):
         r = self.card_login(self.client, "DEMOSHOP0001", "9001")
         self.assertTrue(r.location.endswith("/me/"))  # merged participant dashboard
         page = self.client.get("/me/").get_data(as_text=True)
         self.assertIn("Latte", page)
-        self.assertIn("A$4.50", page)
+        self.assertIn("A$5", page)
 
     def test_admin_login(self):
         r = self.admin_login(self.client)
@@ -69,7 +69,7 @@ class Stage1Test(BankTestCase):
         page = self.client.get("/card/DEMOUSER0001").get_data(as_text=True)
         self.assertIn("DEMO-USER-0001", page)
         self.assertNotIn("Alice", page)
-        self.assertNotIn("95.50", page)
+        self.assertNotIn("A$95", page)
         self.assertEqual(self.client.get("/me/").status_code, 302)  # not logged in
 
     def test_blocked_card_ends_session(self):
@@ -88,7 +88,7 @@ class Stage1Test(BankTestCase):
         token = csrf(self.client, "/admin/accounts/new")
         r = self.client.post("/admin/accounts/new", data={
             "csrf_token": token, "name": "Dave", "role": "user", "pin": "4321",
-            "initial_balance": "20.25", "card_mode": "existing", "card_token": "NEWTAG123",
+            "initial_balance": "20.4", "card_mode": "existing", "card_token": "NEWTAG123",
         })
         self.assertEqual(r.status_code, 302, r.get_data(as_text=True))
 
@@ -96,7 +96,7 @@ class Stage1Test(BankTestCase):
         self.app = self.make_app()
         c = self.app.test_client()
         self.card_login(c, "NEWTAG123", "4321")
-        self.assertIn("A$20.25", c.get("/me/").get_data(as_text=True))
+        self.assertIn("A$20", c.get("/me/").get_data(as_text=True))
 
     def test_ledger_balances_match(self):
         with self.db() as conn:
@@ -104,10 +104,15 @@ class Stage1Test(BankTestCase):
             self.assertEqual(conn.execute("SELECT SUM(amount_cents) FROM ledger_entries").fetchone()[0], 0)
 
     def test_parse_amount(self):
-        self.assertEqual(parse_amount("12.5"), 1250)
-        self.assertEqual(parse_amount("3,20"), 320)
+        # Whole A$ only: nearest integer (half up), anything between 0 and 1 becomes 1.
+        self.assertEqual(parse_amount("12"), 1200)
+        self.assertEqual(parse_amount("12.4"), 1200)
+        self.assertEqual(parse_amount("12.5"), 1300)
+        self.assertEqual(parse_amount("3,6"), 400)
+        self.assertEqual(parse_amount("0.3"), 100)
+        self.assertEqual(parse_amount("0.01"), 100)
         self.assertEqual(parse_amount("0", allow_zero=True), 0)
-        for bad in ("-1", "abc", "1.005", "0", "nan", "1e99"):
+        for bad in ("-1", "abc", "0", "nan", "1e99"):
             with self.assertRaises(BankError):
                 parse_amount(bad)
 
