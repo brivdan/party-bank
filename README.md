@@ -58,6 +58,14 @@ On the free plan, open the Web tab and click "Run until 3 months from today" eve
 
 **Site switch:** **Admin → Dashboard → Turn site OFF/ON**. When the site is off, participants see a "closed" page and can't log in, pay or send money. Admins can still log in and work.
 
+## Running updates on the website from GitHub
+  ```bash
+  cd ~/partybank
+  git pull
+  ~/venv/bin/pip install -r requirements.txt
+  ```
+
+
 ## Maintenance commands
 
 ```
@@ -88,7 +96,7 @@ Admins can see every transaction under **Admin → Transactions**. That page and
   1. Pick products with the +/− buttons and/or enter a custom amount, then tap **Charge customer**.
   2. The server calculates the total from the prices in the database.
 - **Identifying the customer:** any of these works.
-  - Tap the customer's NFC card on the merchant's phone, or scan the card's QR code with the phone camera. Either one opens the card URL, and because the merchant is logged in, the app attaches the card to the merchant's latest open order (from the last 30 minutes).
+  - Tap the customer's NFC card on the merchant's phone, or scan the card's QR code with the phone camera. Either one opens the card URL, and because the merchant is logged in, the app attaches the card to the merchant's latest open order (from the last 1 minute). An older open order is no longer paid by a tap; create a new order, or open the old one and type the card ID.
   - On Android Chrome over HTTPS, use the "Scan NFC card" button.
   - Type the card ID.
 - **Authorization:** the customer enters their PIN on the terminal. Identifying the card shows nothing about the account. Wrong PINs count toward the normal 5-attempt lockout.

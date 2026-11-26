@@ -153,6 +153,19 @@ class SimplifiedTest(BankTestCase):
         self.assertIn("2× Latte", alice.get("/me/history?dir=out").get_data(as_text=True))
         self.assertIn("2× Latte", seller.get("/me/history?dir=in").get_data(as_text=True))
 
+    def test_tap_only_pays_orders_from_the_last_minute(self):
+        seller = self.logged_in("DEMOSHOP0001")
+        order_id = self.open_order(seller, "Latte")
+        with self.db() as conn:  # order made 2 minutes ago
+            conn.execute("UPDATE orders SET created_at = datetime('now', '-2 minutes') WHERE id = ?", (order_id,))
+        r = self.tap(seller, "DEMOUSER0001")
+        self.assertIn("no open order", r.get_data(as_text=True))
+        self.assertEqual(self.balance("Alice Johnson"), 95_00)
+        with self.db() as conn:  # 50 seconds ago: still inside the window
+            conn.execute("UPDATE orders SET created_at = datetime('now', '-50 seconds') WHERE id = ?", (order_id,))
+        self.assertIn("Payment approved", self.tap(seller, "DEMOUSER0001").get_data(as_text=True))
+        self.assertEqual(self.balance("Alice Johnson"), 90_00)
+
     def test_payment_failures(self):
         seller = self.logged_in("DEMOSHOP0001")
         order_id = self.open_order(seller, "Latte", 30)  # 150 > Alice's 95
