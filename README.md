@@ -2,7 +2,7 @@
 
 A local web bank for a party with a fictional currency (A$). Guests (users) and stalls (merchants) log in with a card ID and PIN; bank staff (admins) log in with a username and password.
 
-Stack: Python Flask, SQLite, Jinja2 templates, plain HTML/CSS/JS. Dependencies: Flask, plus segno (a small pure-Python library that draws the QR codes).
+Stack: Python Flask, SQLite, Jinja2 templates, plain HTML/CSS/JS. Dependencies: Flask and segno.
 
 ## Quick start (Windows PowerShell)
 
@@ -95,19 +95,12 @@ Admins can see every transaction under **Admin → Transactions**. That page and
 - **Terminal:**
   1. Pick products with the +/− buttons and/or enter a custom amount, then tap **Charge customer**.
   2. The server calculates the total from the prices in the database.
-- **Identifying the customer:** any of these works.
-  - Tap the customer's NFC card on the merchant's phone, or scan the card's QR code with the phone camera. Either one opens the card URL, and because the merchant is logged in, the app attaches the card to the merchant's latest open order (from the last 1 minute). An older open order is no longer paid by a tap; create a new order, or open the old one and type the card ID.
-  - On Android Chrome over HTTPS, use the "Scan NFC card" button.
-  - Type the card ID.
+- **Paying (NFC tap only):** the customer taps their NFC card on the seller's phone. The phone opens the card URL, and because the seller is logged in, the app pays the seller's latest open order. The tap must happen within 1 minute of creating the order; otherwise cancel the order and create it again. The order page has no card ID entry.
 - **Authorization:** the customer enters their PIN on the terminal. Identifying the card shows nothing about the account. Wrong PINs count toward the normal 5-attempt lockout.
 - **Result:** the terminal shows a green "Payment approved" receipt or a red "Payment declined" box with the reason (wrong PIN, insufficient funds, blocked card).
 - **Paying once:** an order can only be paid once. A second tap on Approve does not charge again.
 - **Dashboard:** current balance, total sales, number of sales, fees paid (shown when fees are on), net revenue, and the transaction history.
 - **Fees:** set a merchant fee percentage in **Admin → Settings** (0 = off). On each sale the fee goes from the merchant to the reserve, in the same database transaction as the purchase. Customers always pay the listed price.
-
-QR codes:
-- **Printing:** print card QR codes from **Admin → Cards → Print QR codes**, or use the QR button next to a card.
-- **On a guest's phone:** users can show their card's QR code on their own dashboard instead of a physical card.
 
 ## Administrator: bank desk and dashboard
 
@@ -152,10 +145,10 @@ By construction, cash held = digital balances + reserve balance.
 
 Database triggers stop anyone from updating or deleting ledger entries, and from changing the money fields of transactions or deleting them.
 
-## Cards, NFC and QR
+## Cards and NFC
 
 - Each card has a random 12-character ID such as `K7QM-2XDH-9PRA`. Typing is case-insensitive and ignores dashes.
-- The only thing written to an NFC tag (as an NDEF URL record) or QR code is the card URL, `<base URL>/card/<card ID>`, for example `http://192.168.1.100:5000/card/K7QM2XDH9PRA`. That is about 45 bytes, well under the 492-byte tag limit. Balances, PINs and names stay in SQLite.
+- The only thing written to an NFC tag (as an NDEF URL record) is the card URL, `<base URL>/card/<card ID>`, for example `http://192.168.1.100:5000/card/K7QM2XDH9PRA`. That is about 45 bytes, well under the 492-byte tag limit. Balances, PINs and names stay in SQLite.
 - Opening a card URL only pre-fills the login form. The PIN is still required, and the page shows nothing about the account.
 - Set the base URL in **Admin → Settings** before you write tags. You can also set it with the `PARTYBANK_BASE_URL` environment variable before the first start. Tags that are already written keep their old URL, so give the server computer a fixed IP on the party Wi-Fi.
 - You can type the card ID by hand on any device.

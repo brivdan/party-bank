@@ -12,7 +12,7 @@ from .db import get_db, transaction
 
 bp = Blueprint("merchant", __name__, url_prefix="/merchant")
 
-OPEN_ORDER_MINUTES = 1  # a tapped card is matched to the latest open order this recent
+OPEN_ORDER_MINUTES = 2  # a tapped card is matched to the latest open order this recent
 
 
 @bp.before_request

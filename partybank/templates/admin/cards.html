@@ -3,7 +3,7 @@
 {% block content %}
 <section class="card">
   <h1>Register cards</h1>
-  <p class="muted small">Write only the URL shown below to each NFC tag (NDEF URL record) or QR code.
+  <p class="muted small">Write only the URL shown below to each NFC tag (NDEF URL record).
     Balances, PINs and names stay in the database.</p>
   <form method="post" class="register-form" autocomplete="off">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -25,12 +25,11 @@
 <section class="card">
   <div class="row-between">
     <h2>All cards</h2>
-    <a href="{{ url_for('admin.cards_print') }}">?? Print QR codes (all active)</a>
   </div>
   <input type="search" class="filter" data-filter="#cards-table" placeholder="Filter by card ID or name…">
   <div class="table-wrap">
   <table id="cards-table">
-    <thead><tr><th>Card ID</th><th>URL for NFC / QR</th><th>Account</th><th>Status</th><th></th></tr></thead>
+    <thead><tr><th>Card ID</th><th>URL for the NFC tag</th><th>Account</th><th>Status</th><th></th></tr></thead>
     <tbody>
     {% for c in cards %}
       <tr>
@@ -40,7 +39,6 @@
             <span class="muted small">{{ c.account_role }}</span>{% else %}<span class="muted">unassigned</span>{% endif %}</td>
         <td><span class="tag {{ 'tag-good' if c.status == 'active' else 'tag-bad' }}">{{ c.status }}</span></td>
         <td class="actions">
-          <a class="button small-button secondary-button" href="{{ url_for('admin.cards_print', id=c.id) }}">QR</a>
           <form method="post" action="{{ url_for('admin.card_status', card_id=c.id) }}" class="inline">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="small {{ 'danger' if c.status == 'active' else '' }}">{{ 'Block' if c.status == 'active' else 'Unblock' }}</button>

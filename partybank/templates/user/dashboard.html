@@ -29,14 +29,7 @@
   <ul class="plain">
     {% for c in cards %}
       <li><code>{{ c.token|card }}</code>
-        {% if c.status != 'active' %}<span class="tag tag-bad">{{ c.status }}</span>
-        {% else %}
-        <details>
-          <summary>Show QR code to pay</summary>
-          <img class="qr" src="{{ (settings.base_url ~ '/card/' ~ c.token)|qr }}" alt="QR code for card {{ c.token|card }}">
-          <p class="muted small">The seller scans this to take your payment{% if config.REQUIRE_PIN %}, then you enter your PIN{% endif %}.</p>
-        </details>
-        {% endif %}</li>
+        {% if c.status != 'active' %}<span class="tag tag-bad">{{ c.status }}</span>{% endif %}</li>
     {% endfor %}
   </ul>
 </section>

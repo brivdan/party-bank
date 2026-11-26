@@ -228,14 +228,19 @@ class Stage3Test(BankTestCase):
         r = self.m.get("/merchant/card/DEMOUSER0001")
         self.assertTrue(r.location.endswith("/merchant/terminal"))
 
-    def test_qr_codes_render(self):
+    def test_nfc_tap_only_no_qr_or_card_entry(self):
         alice = self.app.test_client()
         self.card_login(alice, "DEMOUSER0001", "1111")
-        self.assertIn("data:image/svg+xml", alice.get("/me/").get_data(as_text=True))
+        self.assertNotIn("data:image/svg+xml", alice.get("/me/").get_data(as_text=True))
         admin = self.app.test_client()
         self.admin_login(admin)
-        page = admin.get("/admin/cards/print").get_data(as_text=True)
-        self.assertGreaterEqual(page.count("data:image/svg+xml"), 8)
+        for path in ("/admin/cards", "/me/", "/login"):
+            page = (admin if path.startswith("/admin") else alice).get(path).get_data(as_text=True)
+            self.assertNotIn("QR", page, path)
+        order_id, _ = self.create_order({"Latte": 1})
+        page = self.m.get(f"/merchant/orders/{order_id}").get_data(as_text=True)
+        self.assertIn("Tap to pay", page)
+        self.assertNotIn('name="card"', page)
 
     # --- fees and dashboard ---
 

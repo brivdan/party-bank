@@ -12,7 +12,7 @@
       <input name="base_url" value="{{ current.base_url }}" required placeholder="http://192.168.1.100:5000">
     </label>
     <p class="muted small">Used to build card URLs (<code>{{ current.base_url }}/card/&lt;card-id&gt;</code>).
-      Set it to this computer's Wi-Fi address before writing NFC tags or printing QR codes.
+      Set it to this computer's Wi-Fi address before writing NFC tags.
       Tags already written keep their old URL.</p>
     <label>Merchant fee (%)
       <input name="fee_percent" value="{{ '%g'|format(current.merchant_fee_bps|int / 100) }}" inputmode="decimal" placeholder="0">

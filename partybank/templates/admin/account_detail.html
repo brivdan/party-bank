@@ -58,7 +58,7 @@
   {% if cards %}
   <div class="table-wrap">
   <table>
-    <thead><tr><th>Card ID</th><th>NFC / QR URL</th><th>Status</th><th></th></tr></thead>
+    <thead><tr><th>Card ID</th><th>NFC tag URL</th><th>Status</th><th></th></tr></thead>
     <tbody>
     {% for c in cards %}
       <tr>
@@ -66,7 +66,6 @@
         <td><code class="small copy" title="Click to copy">{{ card_urls[c.token] }}</code></td>
         <td><span class="tag {{ 'tag-good' if c.status == 'active' else 'tag-bad' }}">{{ c.status }}</span></td>
         <td class="actions">
-          <a class="button small-button secondary-button" href="{{ url_for('admin.cards_print', id=c.id) }}">QR</a>
           <form method="post" action="{{ url_for('admin.card_status', card_id=c.id) }}" class="inline">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="back" value="account">
