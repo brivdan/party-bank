@@ -9,7 +9,7 @@ from .banking import (DESK_ACTIONS, BankError, PinError, account_history, assign
                       balance_ranking, bank_overview, card_url, create_account, desk_action,
                       new_idempotency_key,
                       format_money, hash_secret, ledger_problems, normalize_token, parse_amount,
-                      parse_fee_percent, register_card, validate_pin)
+                      parse_fee_percent, register_card, validate_pin, verify_secret)
 from .db import get_db, get_settings, set_setting, transaction
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -355,6 +355,54 @@ def settings_page():
         except BankError as e:
             flash(str(e), "error")
     return render_template("admin/settings.html", current=get_settings(conn))
+
+
+@bp.route("/site", methods=["POST"])
+def site_toggle():
+    """Open or close the site for participants. Admins can always get in."""
+    conn = get_db()
+    now_open = get_settings(conn).get("site_open", "1") == "1"
+    with transaction(conn):
+        set_setting(conn, "site_open", "0" if now_open else "1")
+        _audit(conn, "site.close" if now_open else "site.open", "")
+    flash("The site is now CLOSED for participants." if now_open else "The site is now OPEN.",
+          "info" if now_open else "success")
+    return redirect(request.referrer if _same_site(request.referrer) else url_for("admin.dashboard"))
+
+
+def _same_site(url):
+    return bool(url) and url.startswith(request.host_url)
+
+
+MIN_ADMIN_PASSWORD = 10
+
+
+@bp.route("/password", methods=["GET", "POST"])
+def password():
+    """The logged-in admin changes their own password (current one required)."""
+    conn = get_db()
+    if request.method == "POST":
+        current, new, repeat = (request.form.get(k, "") for k in ("current", "new", "repeat"))
+        admin = conn.execute("SELECT * FROM accounts WHERE id = ?", (g.account["id"],)).fetchone()
+        if not verify_secret(admin["password_hash"], current):
+            with transaction(conn):
+                _audit(conn, "admin.password_change.rejected", "wrong current password")
+            flash("Current password is wrong.", "error")
+        elif len(new) < MIN_ADMIN_PASSWORD:
+            flash(f"New password must be at least {MIN_ADMIN_PASSWORD} characters.", "error")
+        elif new != repeat:
+            flash("The two new passwords don't match.", "error")
+        elif new == current:
+            flash("The new password must be different.", "error")
+        else:
+            with transaction(conn):
+                conn.execute("UPDATE accounts SET password_hash = ? WHERE id = ?",
+                             (hash_secret(new), admin["id"]))
+                _audit(conn, "admin.password_change", f"admin {admin['username']}")
+            flash("Password changed.", "success")
+            return redirect(url_for("admin.dashboard"))
+    return render_template("admin/password.html", min_length=MIN_ADMIN_PASSWORD), \
+        (400 if request.method == "POST" else 200)
 
 
 @bp.route("/audit")

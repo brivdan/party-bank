@@ -18,6 +18,7 @@
           <a href="{{ url_for('admin.transactions') }}">Transactions</a>
           <a href="{{ url_for('admin.settings_page') }}">Settings</a>
           <a href="{{ url_for('admin.audit_log') }}">Audit</a>
+          <a href="{{ url_for('admin.password') }}">Password</a>
         {% else %}{# users and merchants share one participant navigation #}
           <a href="{{ url_for('user.dashboard') }}">Dashboard</a>
           <a href="{{ url_for('merchant.terminal') }}">Terminal</a>
@@ -33,6 +34,10 @@
   </header>
 
   <main class="container">
+    {% if current_account and current_account.role == 'admin' and settings.get('site_open', '1') != '1' %}
+      <div class="flash flash-error">The site is CLOSED: participants can't log in, pay or send money.
+        <a href="{{ url_for('admin.dashboard') }}">Open it on the dashboard</a>.</div>
+    {% endif %}
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% for category, message in messages %}
         <div class="flash flash-{{ category }}">{{ message }}</div>

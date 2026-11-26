@@ -36,6 +36,8 @@ def cmd_seed_demo(app, _args):
 
 def cmd_set_admin_password(app, args):
     password = os.environ.get("PARTYBANK_ADMIN_PASSWORD") or getpass.getpass("New admin password: ")
+    if len(password) < 10:
+        sys.exit("Error: password must be at least 10 characters.")
     conn = connect(app.config["DATABASE"])
     try:
         with transaction(conn):

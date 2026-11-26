@@ -30,6 +30,34 @@ If you skip `seed-demo`, the first `app.py` start creates an `admin` account wit
 
 The demo IDs and PINs are easy to guess. For the real party, run `python manage.py reset`, then `init`, and create real accounts from the admin screens.
 
+## Going online (PythonAnywhere, free)
+
+1. Sign up for a free "Beginner" account at https://www.pythonanywhere.com. Your username becomes the address: `https://USERNAME.pythonanywhere.com`.
+2. **Files** tab: upload `dist/partybank.zip` to your home folder.
+3. **Consoles → Bash**, then run (replace `USERNAME`):
+   ```bash
+   unzip partybank.zip && cd partybank-app
+   python3.12 -m venv ~/venv && ~/venv/bin/pip install -r requirements.txt
+   PARTYBANK_BASE_URL=https://USERNAME.pythonanywhere.com ~/venv/bin/python manage.py init
+   ```
+   `init` creates an empty bank: no demo accounts, every balance 0. It prints the admin password once, so save it.
+4. **Web** tab → *Add a new web app* → *Manual configuration* → Python 3.12. Then:
+   - *Virtualenv*: `/home/USERNAME/venv`
+   - *Force HTTPS*: on
+   - Open the *WSGI configuration file* link, delete everything in it, and paste:
+     ```python
+     import os, sys
+     sys.path.insert(0, "/home/USERNAME/partybank-app")
+     os.environ["PARTYBANK_TZ"] = "Australia/Sydney"   # your time zone
+     from wsgi import application
+     ```
+   - Click **Reload**.
+5. Log in at `https://USERNAME.pythonanywhere.com/admin/login` and change the password under **Password**.
+
+On the free plan, open the Web tab and click "Run until 3 months from today" every 3 months, or the site is switched off. Back up `partybank-app/instance/` (the database and session key) from the Files tab.
+
+**Site switch:** **Admin → Dashboard → Turn site OFF/ON**. When the site is off, participants see a "closed" page and can't log in, pay or send money. Admins can still log in and work.
+
 ## Maintenance commands
 
 ```

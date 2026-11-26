@@ -68,11 +68,15 @@ def default_settings():
         "currency_symbol": "A$",
         "merchant_fee_bps": "0",  # merchant fee in basis points (250 = 2.5%); 0 = fees disabled
         "cashback_bps": "0",      # customer cashback in basis points; 0 = cashback disabled
+        "site_open": "1",         # "0" = site closed to participants (admins still get in)
     }
 
 
 def init_db(path):
     """Create tables, default settings and the reserve account if missing. Idempotent."""
+    if sqlite3.sqlite_version_info < (3, 35):
+        raise RuntimeError(f"SQLite {sqlite3.sqlite_version} is too old; Party Bank needs 3.35 or newer "
+                           "(on PythonAnywhere, choose the newest system image).")
     conn = connect(path)
     try:
         conn.execute("PRAGMA journal_mode = WAL")

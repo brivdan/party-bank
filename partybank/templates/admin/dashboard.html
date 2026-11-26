@@ -1,6 +1,21 @@
 {% extends "base.html" %}
 {% block title %}Admin · {{ settings.party_name }}{% endblock %}
 {% block content %}
+{% set site_open = settings.get('site_open', '1') == '1' %}
+<section class="card">
+  <div class="row-between">
+    <div>
+      <h2>Site is {{ 'OPEN' if site_open else 'CLOSED' }}</h2>
+      <p class="muted small">{{ 'Participants can log in, pay and send money.' if site_open
+        else 'Participants see a "closed" page. Admins can still work.' }}</p>
+    </div>
+    <form method="post" action="{{ url_for('admin.site_toggle') }}"
+          data-confirm="{{ 'Close the site for all participants?' if site_open else 'Open the site for participants?' }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="{{ 'danger' if site_open else '' }}">{{ 'Turn site OFF' if site_open else 'Turn site ON' }}</button>
+    </form>
+  </div>
+</section>
 <div class="stats">
   <div class="stat"><span>{{ stats.accounts }}</span>Accounts ({{ stats.users }} users, {{ stats.merchants }} merchants)</div>
   <div class="stat"><span>{{ stats.digital_cents|money }}</span>Digital account balances</div>

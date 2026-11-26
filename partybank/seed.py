@@ -32,7 +32,7 @@ def ensure_admin(db_path):
         with transaction(conn):
             if conn.execute("SELECT 1 FROM accounts WHERE role = 'admin'").fetchone():
                 return None
-            password = os.environ.get("PARTYBANK_ADMIN_PASSWORD") or secrets.token_urlsafe(9)
+            password = os.environ.get("PARTYBANK_ADMIN_PASSWORD") or secrets.token_urlsafe(18)  # 24 chars
             admin_id = create_admin(conn, username="admin", password=password)
             audit(conn, "admin.bootstrap", "initial admin account created", admin_id)
             return "admin", password

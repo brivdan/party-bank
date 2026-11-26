@@ -55,6 +55,20 @@ def create_app(test_config=None):
     app.register_blueprint(user.bp)
     app.register_blueprint(merchant.bp)
 
+    # Registered after the blueprints, so g.account is already loaded.
+    @app.before_request
+    def site_switch():
+        """When an admin turns the site off, only admins (and the admin login
+        page) get through. Card logins, payments and transfers all stop."""
+        if request.endpoint in (None, "static", "auth.admin_login", "auth.logout"):
+            return None
+        acc = g.get("account")
+        if acc is not None and acc["role"] == "admin":
+            return None
+        if db.get_settings(db.get_db()).get("site_open", "1") == "1":
+            return None
+        return render_template("closed.html"), 503
+
     @app.route("/")
     def index():
         acc = g.get("account")

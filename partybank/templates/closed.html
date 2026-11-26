@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Closed · {{ settings.party_name }}{% endblock %}
+{% block content %}
+<section class="card narrow center">
+  <h1>The bank is closed</h1>
+  <p>{{ settings.party_name }} is not open right now. Please come back later.</p>
+  <p class="muted small"><a href="{{ url_for('auth.admin_login') }}">Bank staff login</a></p>
+</section>
+{% endblock %}
